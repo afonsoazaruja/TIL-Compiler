@@ -1,5 +1,5 @@
-#ifndef __SIMPLE_BASIC_AST_VISITOR_H__
-#define __SIMPLE_BASIC_AST_VISITOR_H__
+#ifndef __TIL_BASIC_AST_VISITOR_H__
+#define __TIL_BASIC_AST_VISITOR_H__
 
 #include <string>
 #include <memory>

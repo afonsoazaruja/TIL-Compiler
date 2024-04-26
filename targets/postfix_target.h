@@ -1,5 +1,5 @@
-#ifndef __SIMPLE_TARGETS_POSTFIX_TARGET_H__
-#define __SIMPLE_TARGETS_POSTFIX_TARGET_H__
+#ifndef __TIL_TARGETS_POSTFIX_TARGET_H__
+#define __TIL_TARGETS_POSTFIX_TARGET_H__
 
 #include <cdk/targets/basic_target.h>
 #include <cdk/ast/basic_node.h>

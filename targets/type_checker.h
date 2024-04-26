@@ -1,5 +1,5 @@
-#ifndef __SIMPLE_TARGETS_TYPE_CHECKER_H__
-#define __SIMPLE_TARGETS_TYPE_CHECKER_H__
+#ifndef __TIL_TARGETS_TYPE_CHECKER_H__
+#define __TIL_TARGETS_TYPE_CHECKER_H__
 
 #include "targets/basic_ast_visitor.h"
 

@@ -1,5 +1,5 @@
-#ifndef __SIMPLE_TARGETS_SYMBOL_H__
-#define __SIMPLE_TARGETS_SYMBOL_H__
+#ifndef __TIL_TARGETS_SYMBOL_H__
+#define __TIL_TARGETS_SYMBOL_H__
 
 #include <string>
 #include <memory>
