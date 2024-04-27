@@ -202,3 +202,7 @@ void til::type_checker::do_variable_declaration_node(til::variable_declaration_n
 void til::type_checker::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
 
 void til::type_checker::do_function_declaration_node(til::function_declaration_node *const node, int lvl) {}
+
+void til::type_checker::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
+
+void til::type_checker::do_block_node(til::block_node *const node, int lvl) {}

@@ -12,7 +12,7 @@ namespace til { // AFONSO: needs review
   //! <pre>
   //! declaration: type qualifier id '(' args ')'
   //!            {
-  //!              new og::function::Declaration(LINE, $1, $2, $3, $5);
+  //!              new til::function::Declaration(LINE, $1, $2, $3, $5);
   //!            }
   //! </pre>
   //!
