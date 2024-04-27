@@ -218,3 +218,5 @@ void til::xml_writer::do_function_definition_node(til::function_definition_node 
 void til::xml_writer::do_block_node(til::block_node *const node, int lvl) {}
 
 void til::xml_writer::do_function_call_node(til::function_call_node *const node, int lvl) {}
+
+void til::xml_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {}
