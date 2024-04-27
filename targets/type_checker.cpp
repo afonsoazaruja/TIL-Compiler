@@ -155,7 +155,7 @@ void til::type_checker::do_assignment_node(cdk::assignment_node *const node, int
   node->type(cdk::primitive_type::create(4, cdk::TYPE_INT));
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------TIL--------------------------------------
 
 void til::type_checker::do_program_node(til::program_node *const node, int lvl) {
   // EMPTY
@@ -195,6 +195,8 @@ void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) 
   node->condition()->accept(this, lvl + 4);
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------NEW--------------------------------------
 
 void til::type_checker::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
+
+void til::type_checker::do_nullptr_node(til::nullptr_node *const node, int lvl) {}

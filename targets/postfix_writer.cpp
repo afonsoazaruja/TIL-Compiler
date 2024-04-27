@@ -276,6 +276,9 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
   _pf.LABEL(mklbl(lbl1 = lbl2));
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------NEW--------------------------------------
 
 void til::postfix_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
+
+void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
+

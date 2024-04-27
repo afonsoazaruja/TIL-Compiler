@@ -1,11 +1,11 @@
-#ifndef __TIL_AST_VARIABLE_DECLARATION_H__
-#define __TIL_AST_VARIABLE_DECLARATION_H__
+#ifndef __TIL_AST_VARIABLE_DECLARATION_NODE_H__
+#define __TIL_AST_VARIABLE_DECLARATION_NODE_H__
 
 #include <cdk/ast/typed_node.h>
 #include <cdk/ast/expression_node.h>
 #include <cdk/types/basic_type.h>
 
-namespace til {
+namespace til { // AFONSO: needs review
 
   class variable_declaration_node: public cdk::typed_node {
     int _qualifier;

@@ -129,7 +129,7 @@ void til::xml_writer::do_assignment_node(cdk::assignment_node * const node, int 
   closeTag(node, lvl);
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------TIL--------------------------------------
 
 void til::xml_writer::do_program_node(til::program_node * const node, int lvl) {
   openTag(node, lvl);
@@ -205,6 +205,8 @@ void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
   closeTag(node, lvl);
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------NEW--------------------------------------
 
 void til::xml_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
+
+void til::xml_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
