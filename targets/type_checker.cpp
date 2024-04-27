@@ -206,3 +206,5 @@ void til::type_checker::do_function_declaration_node(til::function_declaration_n
 void til::type_checker::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
 
 void til::type_checker::do_block_node(til::block_node *const node, int lvl) {}
+
+void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {}
