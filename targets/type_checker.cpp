@@ -221,3 +221,6 @@ void til::type_checker::do_return_node(til::return_node *const node, int lvl) {}
 
 void til::type_checker::do_index_node(til::index_node *const node, int lvl) {}
 
+void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {}
+
+
