@@ -300,3 +300,6 @@ void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {}
 
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {}
 
+void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {}
+
+

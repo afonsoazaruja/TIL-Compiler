@@ -11,7 +11,6 @@ namespace til { // AFONSO: needs review
         cdk::expression_node(lineno) {
     }
 
-  public:
     void accept(basic_ast_visitor *sp, int level) {
       sp->do_nullptr_node(this, level);
     }

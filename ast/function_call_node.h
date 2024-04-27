@@ -37,7 +37,6 @@ namespace til {
         cdk::expression_node(lineno), _identifier(identifier), _arguments(arguments) {
     }
 
-  public:
     const std::string& identifier() {
       return _identifier;
     }

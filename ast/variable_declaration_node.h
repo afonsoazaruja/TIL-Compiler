@@ -19,7 +19,6 @@ namespace til { // AFONSO: needs review
       type(varType);
     }
 
-  public:
     bool constant() {
       return false;  //DAVID: compatibility with the future
     }

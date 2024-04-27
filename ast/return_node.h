@@ -14,12 +14,10 @@ namespace til {
         cdk::basic_node(lineno), _retval(retval) {
     }
 
-  public:
     cdk::expression_node* retval() {
       return _retval;
     }
 
-  public:
     void accept(basic_ast_visitor *sp, int level) {
       sp->do_return_node(this, level);
     }

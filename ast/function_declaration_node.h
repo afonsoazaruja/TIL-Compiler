@@ -33,7 +33,6 @@ namespace til { // AFONSO: needs review
       type(funType);
     }
 
-  public:
     int qualifier() {
       return _qualifier;
     }

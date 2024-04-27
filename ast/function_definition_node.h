@@ -36,7 +36,6 @@ namespace til {
       type(funType);
     }
 
-  public:
     int qualifier() {
       return _qualifier;
     }

@@ -13,7 +13,6 @@ namespace til {
         cdk::basic_node(lineno), _level(level) {
     }
 
-  public:
     int level() const {
       return _level;
     }
