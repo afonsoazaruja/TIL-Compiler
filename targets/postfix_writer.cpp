@@ -167,7 +167,7 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
   _pf.STINT(); // store the value at address
 }
 
-//---------------------------------------------------------------------------
+//----------------------------------TIL--------------------------------------
 
 void til::postfix_writer::do_program_node(til::program_node * const node, int lvl) {
   // Note that Simple doesn't have functions. Thus, it doesn't need
@@ -275,3 +275,7 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
   node->elseblock()->accept(this, lvl + 2);
   _pf.LABEL(mklbl(lbl1 = lbl2));
 }
+
+//---------------------------------------------------------------------------
+
+void til::postfix_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
