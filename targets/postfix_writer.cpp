@@ -291,3 +291,5 @@ void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {}
 void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {}
 
 void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {}
+
+void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {}
