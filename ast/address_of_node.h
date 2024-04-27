@@ -26,6 +26,6 @@ namespace til {
 
   };
 
-} // og
+} // til
 
 #endif

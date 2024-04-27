@@ -217,3 +217,6 @@ void til::type_checker::do_address_of_node(til::address_of_node *const node, int
 
 void til::type_checker::do_next_node(til::next_node *const node, int lvl) {}
 
+void til::type_checker::do_return_node(til::return_node *const node, int lvl) {}
+
+

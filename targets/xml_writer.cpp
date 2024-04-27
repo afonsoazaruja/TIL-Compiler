@@ -227,4 +227,7 @@ void til::xml_writer::do_address_of_node(til::address_of_node *const node, int l
 
 void til::xml_writer::do_next_node(til::next_node *const node, int lvl) {}
 
+void til::xml_writer::do_return_node(til::return_node *const node, int lvl) {}
+
+
 
