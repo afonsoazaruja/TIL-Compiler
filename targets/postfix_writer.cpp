@@ -264,18 +264,6 @@ void til::postfix_writer::do_if_node(til::if_node * const node, int lvl) {
 
 //---------------------------------------------------------------------------
 
-void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  int lbl1, lbl2;
-  node->condition()->accept(this, lvl);
-  _pf.JZ(mklbl(lbl1 = ++_lbl));
-  node->thenblock()->accept(this, lvl + 2);
-  _pf.JMP(mklbl(lbl2 = ++_lbl));
-  _pf.LABEL(mklbl(lbl1));
-  node->elseblock()->accept(this, lvl + 2);
-  _pf.LABEL(mklbl(lbl1 = lbl2));
-}
-
 //----------------------------------NEW--------------------------------------
 
 void til::postfix_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}

@@ -67,7 +67,7 @@ stmt : expr ';'                         { $$ = new til::evaluation_node(LINE, $1
      | tREAD lval ';'                   { $$ = new til::read_node(LINE, $2); }
      | tLOOP '(' expr ')' stmt         { $$ = new til::loop_node(LINE, $3, $5); }
      | tIF '(' expr ')' stmt %prec tIFX { $$ = new til::if_node(LINE, $3, $5); }
-     | tIF '(' expr ')' stmt tELSE stmt { $$ = new til::if_else_node(LINE, $3, $5, $7); }
+//   | tIF '(' expr ')' stmt tELSE stmt { $$ = new til::if_else_node(LINE, $3, $5, $7); }
      | '{' list '}'                     { $$ = $2; }
      ;
 
