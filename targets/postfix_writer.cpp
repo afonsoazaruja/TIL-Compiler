@@ -282,3 +282,4 @@ void til::postfix_writer::do_variable_declaration_node(til::variable_declaration
 
 void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
 
+void til::postfix_writer::do_function_declaration_node(til::function_declaration_node *const node, int lvl) {}
