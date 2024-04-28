@@ -17,32 +17,30 @@ namespace til {
   //! an access to a variable.
   //!
   class function_call_node: public cdk::expression_node {
-    std::string _identifier;
+    cdk::expression_node *_function;
     cdk::sequence_node *_arguments;
-
+  
   public:
     /**
      * Constructor for a function call without arguments.
      * An empty sequence is automatically inserted to represent
      * the missing arguments.
      */
-    function_call_node(int lineno, const std::string &identifier) :
-        cdk::expression_node(lineno), _identifier(identifier), _arguments(new cdk::sequence_node(lineno)) {
+    function_call_node(int lineno, cdk::expression_node *function) :
+        cdk::expression_node(lineno), _function(function), _arguments(new cdk::sequence_node(lineno)) {
     }
 
     /**
      * Constructor for a function call with arguments.
      */
-    function_call_node(int lineno, const std::string &identifier, cdk::sequence_node *arguments) :
-        cdk::expression_node(lineno), _identifier(identifier), _arguments(arguments) {
+    function_call_node(int lineno, cdk::expression_node *function, cdk::sequence_node *arguments) :
+        cdk::expression_node(lineno), _function(function), _arguments(arguments) {
     }
 
-    const std::string& identifier() {
-      return _identifier;
-    }
-    cdk::sequence_node* arguments() {
-      return _arguments;
-    }
+    cdk::expression_node *function() { return _function; }
+    
+    cdk::sequence_node *arguments() { return _arguments; }
+    
     cdk::expression_node *argument(size_t ix) {
       return dynamic_cast<cdk::expression_node*>(_arguments->node(ix));
     }
