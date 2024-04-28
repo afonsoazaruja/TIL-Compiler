@@ -207,11 +207,9 @@ void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
 
 //----------------------------------NEW--------------------------------------
 
-void til::xml_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
+void til::xml_writer::do_declaration_node(til::declaration_node *const node, int lvl) {}
 
 void til::xml_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
-
-void til::xml_writer::do_function_declaration_node(til::function_declaration_node *const node, int lvl) {}
 
 void til::xml_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
 
