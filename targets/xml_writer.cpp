@@ -190,6 +190,21 @@ void til::xml_writer::do_if_node(til::if_node * const node, int lvl) {
   closeTag(node, lvl);
 }
 
+void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  openTag(node, lvl);
+  openTag("condition", lvl + 2);
+  node->condition()->accept(this, lvl + 4);
+  closeTag("condition", lvl + 2);
+  openTag("then", lvl + 2);
+  node->thenblock()->accept(this, lvl + 4);
+  closeTag("then", lvl + 2);
+  openTag("else", lvl + 2);
+  node->elseblock()->accept(this, lvl + 4);
+  closeTag("else", lvl + 2);
+  closeTag(node, lvl);
+}
+
 //----------------------------------NEW--------------------------------------
 
 void til::xml_writer::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}

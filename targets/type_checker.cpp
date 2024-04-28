@@ -191,6 +191,10 @@ void til::type_checker::do_if_node(til::if_node *const node, int lvl) {
   node->condition()->accept(this, lvl + 4);
 }
 
+void til::type_checker::do_if_else_node(til::if_else_node *const node, int lvl) {
+  node->condition()->accept(this, lvl + 4);
+}
+
 //----------------------------------NEW--------------------------------------
 
 void til::type_checker::do_variable_declaration_node(til::variable_declaration_node *const node, int lvl) {}
