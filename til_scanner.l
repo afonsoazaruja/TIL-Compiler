@@ -15,6 +15,89 @@
 %%
   yydebug=1; set_debug(1);
 
+  /*
+  / 1 - TIPO DE DADOS
+  */
+
+"int"                 return tINT_TYPE;
+"double"              return tDOUBLE_TYPE;
+"string"              return tSTRING_TYPE;
+"void"                return tVOID_TYPE;
+
+  /*
+  / 1 - TIPO DE DADOS
+  */
+
+  /*
+  / 3.3 - COMENTÁRIOS
+  */
+
+  /*
+  / 3.8.2 - REAIS EM VÍRGULA FLUTUANTE
+  */
+
+  /*
+  / 3.8.1 - INTEIROS
+  */
+
+  /*
+  / 3.8.3 - CADEIAS DE CARACTERES
+  */
+
+  /*
+  / 4.5 - SÍMBOLOS GLOBAIS
+  */
+
+  /*
+  / 5 - FUNÇÕES
+  */
+
+  /*
+  / 6.2 - INSTRUÇÃO CONDICIONAL
+  */
+
+  /*
+  / 6.3 - INSTRUÇÃO DE ITERAÇÃO
+  */
+
+  /*
+  / 6.4 - INSTRUÇÃO DE TERMINAÇÃO
+  */
+
+  /*
+  / 6.5 - INSTRUÇÃO DE CONTINUAÇÃO
+  */
+
+  /*
+  / 6.6 - ISNTRUÇÃO DE RETORNO
+  */
+
+  /*
+  / 6.8 - INSTRUÇÃO DE IMPRESSÃO
+  */
+
+  /*
+  / 7 - OPERADORES DE EXPRESSÃO
+  */
+
+  /*
+  / ESPECIAL
+  */
+
+"null"                    return tNULLPTR;
+
+  /*
+  / 3.7 - IDENTIFICADORES
+  */
+
+  /*
+  / 3.1 - CARACTERES BRANCOS
+  */
+
+  /*
+  / RESTO
+  */
+
 "--".*                 ; /* ignore comments */
 
 ">="                   return tGE; 

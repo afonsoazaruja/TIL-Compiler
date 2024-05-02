@@ -35,6 +35,8 @@
 %token <i> tINTEGER
 %token <s> tIDENTIFIER tSTRING
 %token tLOOP tIF tPRINT tREAD tBEGIN tEND
+%token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE tNULLPTR
+
 
 %nonassoc tIFX
 %nonassoc tELSE
