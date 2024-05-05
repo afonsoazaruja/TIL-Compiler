@@ -11,7 +11,7 @@
 // don't change this
 #define yyerror LexerError
 %}
-%x X_STRING
+%x X_STRING X_COMMENT
 %%
   yydebug=1; set_debug(1);
 
@@ -25,12 +25,15 @@
 "void"                return tVOID_TYPE;
 
   /*
-  / 1 - TIPO DE DADOS
-  */
-
-  /*
   / 3.3 - COMENTÁRIOS
   */
+
+";".*                 ;                         /* one line comment */
+
+"/*"                  yy_push_state(X_COMMENT);
+<X_COMMENT>"/*"       yy_push_state(X_COMMENT); /* nested comments */
+<X_COMMENT>"*/"       yy_pop_state(X_COMMENT);
+<X_COMMENT>.|\n       ;
 
   /*
   / 3.8.2 - REAIS EM VÍRGULA FLUTUANTE
