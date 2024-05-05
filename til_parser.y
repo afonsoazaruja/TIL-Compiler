@@ -25,6 +25,7 @@
   //-- don't change *any* of these --- END!
 
   int                   i;          /* integer value */
+  double                d;          /* double value */
   std::string          *s;          /* symbol name or string literal */
   cdk::basic_node      *node;       /* node pointer */
   cdk::sequence_node   *sequence;
@@ -33,6 +34,7 @@
 };
 
 %token <i> tINTEGER
+%token <d> tDOUBLE
 %token <s> tIDENTIFIER tSTRING
 %token tLOOP tIF tPRINT tREAD tBEGIN tEND
 %token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE tNULLPTR
@@ -49,7 +51,7 @@
 
 %type <node> stmt program
 %type <sequence> list
-%type <expression> expr
+%type <expression> expr literal
 %type <lvalue> lval
 
 %{
@@ -73,8 +75,7 @@ stmt : expr ';'                         { $$ = new til::evaluation_node(LINE, $1
      | '{' list '}'                     { $$ = $2; }
      ;
 
-expr : tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
-     | tSTRING               { $$ = new cdk::string_node(LINE, $1); }
+expr : literal               { $$ = $1; }
      | '-' expr %prec tUNARY { $$ = new cdk::unary_minus_node(LINE, $2); }
      | '+' expr %prec tUNARY { $$ = new cdk::unary_plus_node(LINE, $2); }
      | expr '+' expr         { $$ = new cdk::add_node(LINE, $1, $3); }
@@ -92,6 +93,11 @@ expr : tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
      | lval                  { $$ = new cdk::rvalue_node(LINE, $1); }
      | lval '=' expr         { $$ = new cdk::assignment_node(LINE, $1, $3); }
      ;
+
+literal : tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
+        | tDOUBLE               { $$ = new cdk::double_node(LINE, $1); }
+        | tSTRING               { $$ = new cdk::string_node(LINE, $1); }
+//      | tNULLPTR              {} // FIX
 
 lval : tIDENTIFIER             { $$ = new cdk::variable_node(LINE, $1); }
      ;

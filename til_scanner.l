@@ -11,6 +11,9 @@
 // don't change this
 #define yyerror LexerError
 %}
+
+EXP [eE][+-]?[0-9]+
+
 %x X_STRING X_COMMENT
 %%
   yydebug=1; set_debug(1);
@@ -32,16 +35,28 @@
 
 "/*"                  yy_push_state(X_COMMENT);
 <X_COMMENT>"/*"       yy_push_state(X_COMMENT); /* nested comments */
-<X_COMMENT>"*/"       yy_pop_state(X_COMMENT);
+<X_COMMENT>"*/"       yy_pop_state();
 <X_COMMENT>.|\n       ;
 
   /*
   / 3.8.2 - REAIS EM VÍRGULA FLUTUANTE
   */
 
+([0-9]*\.[0-9]+|[0-9]+\.[0-9]*)({EXP})? |
+[0-9]+({EXP})                           {
+                                          try {
+                                            yylval.d = std::stod(yytext);
+                                            return tDOUBLE;
+                                          } catch (const std::out_of_range &e) {
+                                            yyerror("double overflow");
+                                          }
+                                        }
+
   /*
   / 3.8.1 - INTEIROS
   */
+
+[0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
 
   /*
   / 3.8.3 - CADEIAS DE CARACTERES
@@ -108,7 +123,7 @@
 "=="                   return tEQ; 
 "!="                   return tNE; 
 
-"loop"                return tLOOP; 
+"loop"                 return tLOOP;
 "if"                   return tIF; 
 "else"                 return tELSE; 
 "print"                return tPRINT; 
@@ -123,8 +138,6 @@
 <X_STRING>\\\'         *yylval.s += yytext + 1;
 <X_STRING>.            *yylval.s += yytext;
 <X_STRING>\n           yyerror("newline in string");
-
-[0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER;
 
 [-()<>=+*/%;{}.]       return *yytext;
 
