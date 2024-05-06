@@ -55,7 +55,7 @@ EXP [eE][+-]?[0-9]+
   /*
   / 3.8.1 - INTEIROS
   */
-
+0[0-9]+                yyerror("Invalid Integer"); /* inteiro que comece por 0 */
 [0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
 
   /*
