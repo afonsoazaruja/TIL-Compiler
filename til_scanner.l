@@ -55,6 +55,7 @@ EXP [eE][+-]?[0-9]+
   /*
   / 3.8.1 - INTEIROS
   */
+  
 0[0-9]+                yyerror("Invalid Integer"); /* inteiro que comece por 0 */
 [0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
 
@@ -62,9 +63,20 @@ EXP [eE][+-]?[0-9]+
   / 3.8.3 - CADEIAS DE CARACTERES
   */
 
+\"                     yy_push_state(X_STRING); yylval.s = new std::string("");
+<X_STRING>\"           yy_pop_state(); return tSTRING;
+<X_STRING>\\\"         *yylval.s += yytext + 1;
+<X_STRING>.            *yylval.s += yytext;
+<X_STRING>\n           yyerror("newline in string");
+
   /*
   / 4.5 - SÍMBOLOS GLOBAIS
   */
+
+"external"              return tEXTERNAL;
+"forward"               return tFORWARD;
+"public"                return tPUBLIC;
+"var"                   return tVAR;
 
   /*
   / 5 - FUNÇÕES
@@ -108,6 +120,8 @@ EXP [eE][+-]?[0-9]+
   / 3.7 - IDENTIFICADORES
   */
 
+[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tIDENTIFIER;
+
   /*
   / 3.1 - CARACTERES BRANCOS
   */
@@ -130,14 +144,6 @@ EXP [eE][+-]?[0-9]+
 "read"                 return tREAD; 
 "begin"                return tBEGIN; 
 "end"                  return tEND; 
-
-[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tIDENTIFIER;
-
-\'                     yy_push_state(X_STRING); yylval.s = new std::string("");
-<X_STRING>\'           yy_pop_state(); return tSTRING;
-<X_STRING>\\\'         *yylval.s += yytext + 1;
-<X_STRING>.            *yylval.s += yytext;
-<X_STRING>\n           yyerror("newline in string");
 
 [-()<>=+*/%;{}.]       return *yytext;
 
