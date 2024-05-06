@@ -36,7 +36,7 @@
 %token <i> tINTEGER
 %token <d> tDOUBLE
 %token <s> tIDENTIFIER tSTRING
-%token tLOOP tIF tPRINT tREAD tBEGIN tEND
+%token tLOOP tIF tPRINT tPRINTLN tREAD tSTOP tNEXT tRETURN tBEGIN tEND /* remover begin e end */
 %token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE tNULLPTR
 %token tEXTERNAL tFORWARD tPUBLIC tVAR 
 

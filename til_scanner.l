@@ -3,6 +3,7 @@
 %{ 
 // make relevant includes before including the parser's tab file
 #include <string>
+#include <sstream>
 #include <cdk/ast/sequence_node.h>
 #include <cdk/ast/expression_node.h>
 #include <cdk/ast/lvalue_node.h>
@@ -10,11 +11,13 @@
 
 // don't change this
 #define yyerror LexerError
+
+static std::ostringstream strliteral;
 %}
 
 EXP [eE][+-]?[0-9]+
 
-%x X_STRING X_COMMENT
+%x X_STRING X_COMMENT X_BACKSLASH X_IGNORE_STRING
 %%
   yydebug=1; set_debug(1);
 
@@ -63,11 +66,48 @@ EXP [eE][+-]?[0-9]+
   / 3.8.3 - CADEIAS DE CARACTERES
   */
 
-\"                     yy_push_state(X_STRING); yylval.s = new std::string("");
-<X_STRING>\"           yy_pop_state(); return tSTRING;
-<X_STRING>\\\"         *yylval.s += yytext + 1;
-<X_STRING>.            *yylval.s += yytext;
-<X_STRING>\n           yyerror("newline in string");
+\"                          yy_push_state(X_STRING);
+<X_STRING>\\                yy_push_state(X_BACKSLASH);
+<X_STRING>\"                {
+                            yylval.s = new std::string(strliteral.str());
+                            strliteral.str("");
+                            yy_pop_state();
+                            return tSTRING;
+                            }
+
+<X_STRING>\0                yyerror("NULL char in String");
+<X_STRING>\n                yyerror("Newline in String");
+<X_STRING>.                 strliteral << *yytext;
+
+<X_BACKSLASH>t              strliteral << '\t'; yy_pop_state();
+<X_BACKSLASH>n              strliteral << '\n'; yy_pop_state();
+<X_BACKSLASH>r              strliteral << '\r'; yy_pop_state();
+<X_BACKSLASH>\"             strliteral << '\"'; yy_pop_state();
+<X_BACKSLASH>\\             strliteral << '\\'; yy_pop_state();
+
+<X_BACKSLASH>0              yy_push_state(X_IGNORE_STRING); /* End of String */
+
+<X_BACKSLASH>[0-7]{1,3}     {
+                            unsigned long num = std::stoi(yytext, NULL, 8);
+                            if (num > 255) {
+                              yyerror("Invalid 8 bit Number");
+                            }
+                            strliteral << (char)(unsigned char) num;
+                            yy_pop_state();
+                            }
+
+<X_BACKSLASH>.              strliteral << *yytext; yy_pop_state();
+
+<X_IGNORE_STRING>\"         {
+                            yylval.s = new std::string(strliteral.str());
+                            strliteral.str("");
+                            yy_pop_state(); yy_pop_state(); yy_pop_state(); /* Ignorar resto da string sair dos 3 estados */
+                            return tSTRING;
+                            }
+
+<X_IGNORE_STRING>\n             yyerror("Newline in String");
+<X_IGNORE_STRING>\0             yyerror("Newline in String");
+<X_IGNORE_STRING>.|\\\"|\\\\    strliteral << *yytext; yy_pop_state();
 
   /*
   / 4.5 - SÍMBOLOS GLOBAIS
@@ -86,29 +126,47 @@ EXP [eE][+-]?[0-9]+
   / 6.2 - INSTRUÇÃO CONDICIONAL
   */
 
+"if"                   return tIF;
+
   /*
   / 6.3 - INSTRUÇÃO DE ITERAÇÃO
   */
+
+"loop"                 return tLOOP;
 
   /*
   / 6.4 - INSTRUÇÃO DE TERMINAÇÃO
   */
 
+"stop"                 return tSTOP;
+
   /*
   / 6.5 - INSTRUÇÃO DE CONTINUAÇÃO
   */
+
+"next"                 return tNEXT;
 
   /*
   / 6.6 - ISNTRUÇÃO DE RETORNO
   */
 
+"return"               return tRETURN;
+
   /*
   / 6.8 - INSTRUÇÃO DE IMPRESSÃO
   */
-
+  
+"print"                return tPRINT;
+"println"              return tPRINTLN;
+  
   /*
   / 7 - OPERADORES DE EXPRESSÃO
   */
+
+">="                   return tGE;
+"<="                   return tLE;
+"=="                   return tEQ;
+"!="                   return tNE;
 
   /*
   / ESPECIAL
@@ -129,21 +187,6 @@ EXP [eE][+-]?[0-9]+
   /*
   / RESTO
   */
-
-"--".*                 ; /* ignore comments */
-
-">="                   return tGE; 
-"<="                   return tLE; 
-"=="                   return tEQ; 
-"!="                   return tNE; 
-
-"loop"                 return tLOOP;
-"if"                   return tIF; 
-"else"                 return tELSE; 
-"print"                return tPRINT; 
-"read"                 return tREAD; 
-"begin"                return tBEGIN; 
-"end"                  return tEND; 
 
 [-()<>=+*/%;{}.]       return *yytext;
 
