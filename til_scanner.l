@@ -122,6 +122,18 @@ EXP [eE][+-]?[0-9]+
   / 5 - FUNÇÕES
   */
 
+[@()]		               return *yytext;
+
+"->"                   return tARROW;
+
+"program"              return tBEGIN;
+
+  /*
+  / 6.1 - BLOCOS
+  */
+
+"block"                return tBLOCK;
+
   /*
   / 6.2 - INSTRUÇÃO CONDICIONAL
   */
@@ -163,10 +175,27 @@ EXP [eE][+-]?[0-9]+
   / 7 - OPERADORES DE EXPRESSÃO
   */
 
+[-+*/%?~=;,]     return *yytext;
+
 ">="                   return tGE;
 "<="                   return tLE;
 "=="                   return tEQ;
 "!="                   return tNE;
+
+"&&"                   return tAND;
+"||"                   return tOR;
+
+  /*
+  / 7 - EXPRESSÕES ESPECIAIS
+  */
+
+"read"                 return tREAD;
+"set"                  return tSET;
+"index"                return tINDEX;
+"objects"              return tOBJECTS;
+"sizeof"               return tSIZEOF;
+"function"             return tFUNCTION;
+
 
   /*
   / ESPECIAL
