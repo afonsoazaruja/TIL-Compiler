@@ -125,50 +125,25 @@ EXP [eE][+-]?[0-9]+
   / 5 - FUNÇÕES
   */
 
-[@]		               return *yytext;
-
+[@]		                 return *yytext;
 "program"              return tBEGIN;
 
   /*
   / 6.1 - BLOCOS
+  / 6.2 - INSTRUÇÃO CONDICIONAL
+  / 6.3 - INSTRUÇÃO DE ITERAÇÃO
+  / 6.4 - INSTRUÇÃO DE TERMINAÇÃO
+  / 6.5 - INSTRUÇÃO DE CONTINUAÇÃO
+  / 6.6 - ISNTRUÇÃO DE RETORNO
+  / 6.8 - INSTRUÇÃO DE IMPRESSÃO
   */
 
 "block"                return tBLOCK;
-
-  /*
-  / 6.2 - INSTRUÇÃO CONDICIONAL
-  */
-
 "if"                   return tIF;
-
-  /*
-  / 6.3 - INSTRUÇÃO DE ITERAÇÃO
-  */
-
 "loop"                 return tLOOP;
-
-  /*
-  / 6.4 - INSTRUÇÃO DE TERMINAÇÃO
-  */
-
 "stop"                 return tSTOP;
-
-  /*
-  / 6.5 - INSTRUÇÃO DE CONTINUAÇÃO
-  */
-
 "next"                 return tNEXT;
-
-  /*
-  / 6.6 - ISNTRUÇÃO DE RETORNO
-  */
-
 "return"               return tRETURN;
-
-  /*
-  / 6.8 - INSTRUÇÃO DE IMPRESSÃO
-  */
-  
 "print"                return tPRINT;
 "println"              return tPRINTLN;
   
@@ -182,7 +157,6 @@ EXP [eE][+-]?[0-9]+
 "<="                   return tLE;
 "=="                   return tEQ;
 "!="                   return tNE;
-
 "&&"                   return tAND;
 "||"                   return tOR;
 
@@ -196,7 +170,6 @@ EXP [eE][+-]?[0-9]+
 "objects"              return tOBJECTS;
 "sizeof"               return tSIZEOF;
 "function"             return tFUNCTION;
-
 
   /*
   / ESPECIAL
@@ -214,11 +187,11 @@ EXP [eE][+-]?[0-9]+
   / 3.1 - CARACTERES BRANCOS
   */
 
+[ \t\n\r]+               ; /* ignore whitespace */
+
   /*
   / RESTO
   */
-
-[ \t\n\r]+               ; /* ignore whitespace */
 
 .                      yyerror("Unknown character");
 
