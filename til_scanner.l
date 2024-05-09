@@ -17,7 +17,7 @@ static std::ostringstream strliteral;
 
 EXP [eE][+-]?[0-9]+
 
-%x X_STRING X_COMMENT X_BACKSLASH X_IGNORE_STRING
+%x X_STRING X_COMMENT X_BACKSLASH X_IGNORE_STRING X_HEXNUM
 %%
   yydebug=1; set_debug(1);
 
@@ -59,8 +59,11 @@ EXP [eE][+-]?[0-9]+
   / 3.8.1 - INTEIROS
   */
   
-0[0-9]+                yyerror("Invalid Integer"); /* inteiro que comece por 0 */
-[0-9]+                 yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
+0[0-9]+                 yyerror("Invalid Integer"); /* inteiro que comece por 0 */
+[0-9]+                  yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
+
+"0x"                    yy_push_state(X_HEXNUM);
+<X_HEXNUM>[0-9a-fA-F]+  yylval.i = strtol(yytext, nullptr, 16); return tINTEGER; 
 
   /*
   / 3.8.3 - CADEIAS DE CARACTERES
@@ -122,9 +125,7 @@ EXP [eE][+-]?[0-9]+
   / 5 - FUNÇÕES
   */
 
-[@()]		               return *yytext;
-
-"->"                   return tARROW;
+[@]		               return *yytext;
 
 "program"              return tBEGIN;
 
@@ -175,7 +176,7 @@ EXP [eE][+-]?[0-9]+
   / 7 - OPERADORES DE EXPRESSÃO
   */
 
-[-+*/%?~=;,]     return *yytext;
+[-+*/%?~;()<>]     return *yytext;
 
 ">="                   return tGE;
 "<="                   return tLE;
@@ -217,9 +218,7 @@ EXP [eE][+-]?[0-9]+
   / RESTO
   */
 
-[-()<>=+*/%;{}.]       return *yytext;
-
-[ \t\n]+               ; /* ignore whitespace */
+[ \t\n\r]+               ; /* ignore whitespace */
 
 .                      yyerror("Unknown character");
 
