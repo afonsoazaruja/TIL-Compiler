@@ -109,7 +109,7 @@ EXP [eE][+-]?[0-9]+
                             }
 
 <X_IGNORE_STRING>\n             yyerror("Newline in String");
-<X_IGNORE_STRING>\0             yyerror("Newline in String");
+<X_IGNORE_STRING>\0             yyerror("NULL char in String");
 <X_IGNORE_STRING>.|\\\"|\\\\    strliteral << *yytext; yy_pop_state();
 
   /*

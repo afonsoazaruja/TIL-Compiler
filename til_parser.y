@@ -26,20 +26,24 @@
 
   int                   i;          /* integer value */
   double                d;          /* double value */
-  std::string          *s;          /* symbol name or string literal */
-  cdk::basic_node      *node;       /* node pointer */
-  cdk::sequence_node   *sequence;
-  cdk::expression_node *expression; /* expression nodes */
-  cdk::lvalue_node     *lvalue;
+  std::string           *s;          /* symbol name or string literal */
+  cdk::basic_node       *node;       /* node pointer */
+  cdk::sequence_node    *sequence;
+  cdk::expression_node  *expression; /* expression nodes */
+  cdk::lvalue_node      *lvalue;
+  til::declaration_node *decl;
+  std::shared_ptr<cdk::basic_type> vartype;
 };
 
 %token <i> tINTEGER
 %token <d> tDOUBLE
 %token <s> tIDENTIFIER tSTRING
-%token tBLOCK tLOOP tIF tPRINT tARROW tPRINTLN tREAD tSTOP tNEXT tRETURN tBEGIN tEND tAND tOR  tSET tINDEX tOBJECTS tSIZEOF tFUNCTION /* remover begin e end */
-%token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE tNULLPTR
-%token tEXTERNAL tFORWARD tPUBLIC tVAR 
-
+%token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE 
+%token tBLOCK tIF tLOOP tSTOP tNEXT tRETURN tPRINT tPRINTLN
+%token tREAD tSET tINDEX tOBJECTS tSIZEOF tFUNCTION
+%token tARROW tBEGIN tEND tAND tOR /* remover begin e end */
+%token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
+%token tNULLPTR
 
 %nonassoc tIFX
 %nonassoc tELSE
@@ -50,15 +54,27 @@
 %left '*' '/' '%'
 %nonassoc tUNARY
 
+%type <decl> declaration
 %type <node> stmt program
-%type <sequence> list
+%type <sequence> list file declarations
 %type <expression> expr literal
 %type <lvalue> lval
+%type <vartype> type
 
 %{
 //-- The rules below will be included in yyparse, the main parsing function.
 %}
 %%
+
+file         : /* empty */  { compiler->ast($$ = new cdk::sequence_node(LINE)); }
+             | declarations { compiler->ast($$ = $1); }
+             ;
+
+declarations : declaration              { $$ = new cdk::sequence_node(LINE, $1); }
+             | declarations declaration { $$ = new cdk::sequence_node(LINE, $2, $1); } 
+
+declaration  : '(' type tIDENTIFIER expr ')' { $$ = new til::declaration_node(LINE, tPRIVATE, $1, *$2, $3); delete $2; }
+             ;
 
 program : tBEGIN list tEND { compiler->ast(new til::program_node(LINE, $2)); }
         ;
@@ -75,6 +91,12 @@ stmt : expr ';'                         { $$ = new til::evaluation_node(LINE, $1
      | tIF '(' expr ')' stmt tELSE stmt { $$ = new til::if_else_node(LINE, $3, $5, $7); }
      | '{' list '}'                     { $$ = $2; }
      ;
+
+type : tINT_TYPE         { $$ = cdk::primitive_type::create(4, cdk::TYPE_INT); }
+     | tDOUBLE_TYPE      { $$ = cdk::primitive_type::create(8, cdk::TYPE_DOUBLE); }
+     | tSTRING_TYPE      { $$ = cdk::primitive_type::create(4, cdk::TYPE_STRING); }
+     | tVOID_TYPE        { $$ = cdk::reference_type::create(4, cdk::primitive_type::create(4, cdk::TYPE_VOID)); }
+     ; // FALTA PONTEIRO???
 
 expr : literal               { $$ = $1; }
      | '-' expr %prec tUNARY { $$ = new cdk::unary_minus_node(LINE, $2); }
