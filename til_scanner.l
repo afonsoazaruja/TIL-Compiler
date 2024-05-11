@@ -126,7 +126,7 @@ EXP [eE][+-]?[0-9]+
   */
 
 [@]		                 return *yytext;
-"program"              return tBEGIN;
+"program"              return tPROGRAM;
 
   /*
   / 6.1 - BLOCOS
@@ -181,7 +181,7 @@ EXP [eE][+-]?[0-9]+
   / 3.7 - IDENTIFICADORES
   */
 
-[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tIDENTIFIER;
+[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tID;
 
   /*
   / 3.1 - CARACTERES BRANCOS
