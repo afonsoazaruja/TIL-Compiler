@@ -151,7 +151,7 @@ EXP [eE][+-]?[0-9]+
   / 7 - OPERADORES DE EXPRESSÃO
   */
 
-[-+*/%?~;()<>]     return *yytext;
+[-+*/%?~;()!<>]     return *yytext;
 
 ">="                   return tGE;
 "<="                   return tLE;
