@@ -140,6 +140,7 @@ EXP [eE][+-]?[0-9]+
 
 "block"                return tBLOCK;
 "if"                   return tIF;
+"else"		       return tELSE;
 "loop"                 return tLOOP;
 "stop"                 return tSTOP;
 "next"                 return tNEXT;

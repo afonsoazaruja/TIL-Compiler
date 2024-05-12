@@ -48,7 +48,7 @@
 %token tNULLPTR
 
 %nonassoc tIFX
-%nonassoc tELSE
+//-- %nonassoc tELSE -- is not included on the lex file
 
 %right '='
 %left tGE tLE tEQ tNE '>' '<'
@@ -75,7 +75,7 @@ file         : /* empty */                 { compiler->ast($$ = new cdk::sequenc
              | global_declarations program { compiler->ast($$ = new cdk::sequence_node(LINE, $2, $1)); }
              ;
 
-program : tPROGRAM list { compiler->ast(new til::program_node(LINE, $2)); } // TODO: IMPLEMENTAR CORRETAMENTE
+program : tPROGRAM list { $$ = new til::program_node(LINE, $2)); }
         ;
 
 /* GLOBAL DECLARATIONS */
