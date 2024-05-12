@@ -10,14 +10,14 @@ namespace til { // AFONSO: needs review
   class declaration_node: public cdk::typed_node {
     int _qualifier;
     std::string _identifier;
-    cdk::expression_node *_initializer;
+    cdk::expression_node *_init;
 
   public:
     declaration_node(int lineno, int qualifier, 
                     std::shared_ptr<cdk::basic_type> varType, 
                     const std::string &identifier,
-                    cdk::expression_node *initializer) :
-      cdk::typed_node(lineno), _qualifier(qualifier), _identifier(identifier), _initializer(initializer) {
+                    cdk::expression_node *init) :
+      cdk::typed_node(lineno), _qualifier(qualifier), _identifier(identifier), _init(init) {
       type(varType);
     }
 
@@ -25,7 +25,7 @@ namespace til { // AFONSO: needs review
     
     const std::string& identifier() const { return _identifier; }
     
-    cdk::expression_node* initializer() { return _initializer; }
+    cdk::expression_node* init() { return _init; }
 
     void accept(basic_ast_visitor *sp, int level) {
       sp->do_declaration_node(this, level);
