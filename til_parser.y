@@ -48,7 +48,7 @@
 %token tNULLPTR
 
 %nonassoc tIFX
-//-- %nonassoc tELSE -- is not included on the lex file
+%nonassoc tELSE 
 
 %right '='
 %left tGE tLE tEQ tNE '>' '<'
