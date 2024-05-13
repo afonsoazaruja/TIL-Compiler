@@ -62,7 +62,7 @@
 %type <lvalue> lval
 %type <type> type fun_type var opt_var
 %type <types> types
-%type <block> block
+%type <block> block impl_block
 
 %{
 //-- The rules below will be included in yyparse, the main parsing function.
@@ -116,7 +116,12 @@ block : '(' tBLOCK ')'                              { $$ = new til::block_node(L
       | '(' tBLOCK declarations ')'                 { $$ = new til::block_node(LINE, $3, nullptr);}
       | '(' tBLOCK instructions ')'                 { $$ = new til::block_node(LINE, nullptr, $3);}
       | '(' tBLOCK declarations instructions ')'    { $$ = new til::block_node(LINE, $3, $4);}
-      ;
+      
+impl_block  : /* empty */                              { $$ = new til::block_node(LINE, nullptr, nullptr);}
+            | declarations                  { $$ = new til::block_node(LINE, $1, nullptr);}
+            | instructions                  { $$ = new til::block_node(LINE, nullptr, $1);}
+            | declarations instructions     { $$ = new til::block_node(LINE, $1, $2);}
+            ;
 
 declarations      : declaration                     { $$ = new cdk::sequence_node(LINE, $1); }
                   | declarations declaration        { $$ = new cdk::sequence_node(LINE, $2, $1); }
@@ -144,10 +149,14 @@ instruction : expr                                  { $$ = $1; }
             ;
 
 conditional_instruction : '(' tIF expr block ')'            { $$ = new til::if_node(LINE, $3, $4);}
-                        | '(' tIF expr block block')'       { $$ = new til::if_else_node(LINE,$3, $4, $5);}
+                        | '(' tIF expr block block')'       { $$ = new til::if_else_node(LINE, $3, $4, $5);}
+                        | '(' tIF expr impl_block ')'            { $$ = new til::if_node(LINE, $3, $4);}
+                        | '(' tIF expr impl_block block')'       { $$ = new til::if_else_node(LINE, $3, $4, $5);}
+                        | '(' tIF expr block impl_block')'       { $$ = new til::if_else_node(LINE, $3, $4, $5);}
+                        | '(' tIF expr impl_block impl_block')'       { $$ = new til::if_else_node(LINE, $3, $4, $5);}
                         ;
 
-iteration_instruction  : '(' tLOOP expr block ')'           { $$ = new til::loop_node(LINE,$3, $4);}
+iteration_instruction  : '(' tLOOP expr block ')'           { $$ = new til::loop_node(LINE, $3, $4);}
                        ;
 
 opt_global_init :  /* empty */            { $$ = nullptr; }
@@ -166,7 +175,7 @@ init : expr                     { $$ = $1; }
      ;
 
 
-fun : '(' tFUNCTION '(' type opt_declarations ')' block ')'     { $$ = new til::function_definition_node(LINE, $4, $5, $7);}
+fun : '(' tFUNCTION '(' type opt_declarations ')' impl_block ')'     { $$ = new til::function_definition_node(LINE, $4, $5, $7);}
     ;
 
 opt_declarations : /* empty */        { $$ = nullptr; }
@@ -201,6 +210,7 @@ expr : literal                   { $$ = $1; }
      | tSIZEOF expr              { $$ = new til::sizeof_node(LINE, $2);}
      | tREAD                     { $$ = new til::read_node(LINE);} 
      | expr '(' opt_exprs ')'    { $$ = new til::function_call_node(LINE, $1, $3);}
+     | '@' exprs                 { $$ = new til::function_call_node(LINE, nullptr, $2);}   
      | '@' '(' opt_exprs ')'     { $$ = new til::function_call_node(LINE, nullptr, $3);}
      | fun                       { $$ = $1;}
      | lval                      { $$ = new cdk::rvalue_node(LINE, $1); }
