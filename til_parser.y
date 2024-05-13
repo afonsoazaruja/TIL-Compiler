@@ -75,7 +75,7 @@ file         : /* empty */                 { compiler->ast($$ = new cdk::sequenc
              | global_declarations program { compiler->ast($$ = new cdk::sequence_node(LINE, $2, $1)); }
              ;
 
-program : tPROGRAM list { $$ = new til::program_node(LINE, $2)); }
+program : tPROGRAM list { $$ = new til::program_node(LINE, $2); }
         ;
 
 /* GLOBAL DECLARATIONS */
