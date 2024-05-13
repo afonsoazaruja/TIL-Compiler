@@ -4,7 +4,6 @@
 // make relevant includes before including the parser's tab file
 #include <string>
 #include <sstream>
-#include <sstream>
 #include <cdk/ast/sequence_node.h>
 #include <cdk/ast/expression_node.h>
 #include <cdk/ast/lvalue_node.h>
@@ -15,16 +14,12 @@
 
 static std::ostringstream strliteral;
 
-static std::ostringstream strliteral;
 %}
 
 EXP [eE][+-]?[0-9]+
 
 %x X_STRING X_COMMENT X_BACKSLASH X_IGNORE_STRING X_HEXNUM
 
-EXP [eE][+-]?[0-9]+
-
-%x X_STRING X_COMMENT X_BACKSLASH X_IGNORE_STRING X_HEXNUM
 %%
   yydebug=1; set_debug(1);
 

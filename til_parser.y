@@ -35,27 +35,10 @@
   cdk::lvalue_node      *lvalue;
 
   til::block_node       *block; 
-  double                d;          /* double value */
-  std::string           *s;          /* symbol name or string literal */
-  std::vector<std::shared_ptr<cdk::basic_type>> *types;
 
-  cdk::basic_node       *node;       /* node pointer */
-  cdk::sequence_node    *sequence;
-  cdk::expression_node  *expression; /* expression nodes */
-  cdk::lvalue_node      *lvalue;
-
-  til::block_node       *block; 
 };
 
 %token <i> tINTEGER
-%token <d> tDOUBLE
-%token <s> tID tSTRING
-%token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE 
-%token tBLOCK tIF tLOOP tSTOP tNEXT tRETURN tPRINT tPRINTLN
-%token tREAD tSET tINDEX tOBJECTS tSIZEOF tFUNCTION
-%token tAND tOR tPROGRAM
-%token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
-%token tNULLPTR
 %token <d> tDOUBLE
 %token <s> tID tSTRING
 %token tINT_TYPE tDOUBLE_TYPE tSTRING_TYPE tVOID_TYPE 
@@ -73,16 +56,13 @@
 %left '*' '/' '%'
 %nonassoc tUNARY
 
-%type <sequence> file declarations declarations list exprs
-%type <node> program stmt declaration declaration
-%type <expression> expr literal init init opt_init opt_init fun_def
+%type <sequence> file declarations exprs opt_exprs instructions global_declarations opt_declarations 
+%type <node> program declaration instruction global_declaration conditional_instruction iteration_instruction
+%type <expression> expr literal init opt_init opt_global_init global_init fun
 %type <lvalue> lval
-%type <type> type void_type data_type fun_type return_type void_ptr var
+%type <type> type fun_type var opt_var
 %type <types> types
-//%type <block> block
-%type <type> type void_type data_type fun_type return_type void_ptr var
-%type <types> types
-//%type <block> block
+%type <block> block
 
 %{
 //-- The rules below will be included in yyparse, the main parsing function.
@@ -97,12 +77,6 @@ file         : /* empty */                           { compiler->ast($$ = new cd
 
 program : '(' tPROGRAM block ')' { $$ = new til::program_node(LINE, $3); }
         ;
-
-/* GLOBAL DECLARATIONS */
-
-
-
-/* DECLARATION TYPE */
 
 global_declarations      : global_declaration                       { $$ = new cdk::sequence_node(LINE, $1); }
                          | global_declarations global_declaration   { $$ = new cdk::sequence_node(LINE, $2, $1); }
@@ -129,20 +103,19 @@ types : type                            { $$ = new std::vector<std::shared_ptr<c
 type : tINT_TYPE                        { $$ = cdk::primitive_type::create(4, cdk::TYPE_INT); }
      | tDOUBLE_TYPE                     { $$ = cdk::primitive_type::create(8, cdk::TYPE_DOUBLE); }
      | tSTRING_TYPE                     { $$ = cdk::primitive_type::create(4, cdk::TYPE_STRING); }
-     | void_type                        { $$ = cdk::primitive_type::create(0, cdk::TYPE_VOID); }
+     | tVOID_TYPE                       { $$ = cdk::primitive_type::create(0, cdk::TYPE_VOID); }
      | type '!'                         { $$ = cdk::reference_type::create(4, $1); }                       
      | fun_type                         { $$ = $1; }
      ;
-
 
 fun_type : '(' type ')'                 { $$ = cdk::functional_type::create($2); }
          | '(' type '(' types ')' ')'   { $$ = cdk::functional_type::create(*$4, $2); delete $4; }
          ;
 
-block : '(' tBLOCK ')'                              { $$ = til::block_node(LINE, nullptr, nullptr);}
-      | '(' tBLOCK declarations ')'                 { $$ = til::block_node(LINE, $3, nullptr);}
-      | '(' tBLOCK instructions ')'                 { $$ = til::block_node(LINE, nullptr, $3);}
-      | '(' tBLOCK declarations instructions ')'    { $$ = til::block_node(LINE, $3, $4);}
+block : '(' tBLOCK ')'                              { $$ = new til::block_node(LINE, nullptr, nullptr);}
+      | '(' tBLOCK declarations ')'                 { $$ = new til::block_node(LINE, $3, nullptr);}
+      | '(' tBLOCK instructions ')'                 { $$ = new til::block_node(LINE, nullptr, $3);}
+      | '(' tBLOCK declarations instructions ')'    { $$ = new til::block_node(LINE, $3, $4);}
       ;
 
 declarations      : declaration                     { $$ = new cdk::sequence_node(LINE, $1); }
@@ -151,34 +124,34 @@ declarations      : declaration                     { $$ = new cdk::sequence_nod
 
 declaration    : '(' type tID opt_init      ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
                | '(' var tID init           ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
+               ;
 
-
-intructions : instruction                           { $$ = new cdk::sequence_node(LINE, $1); }
+instructions : instruction                           { $$ = new cdk::sequence_node(LINE, $1); }
             | instructions instruction              { $$ = new cdk::sequence_node(LINE, $2, $1); }
             ;
 
-instruction : expr                                  { $$ = $1; }    
-            | '(' tPRINT exprs ')'                  { $$ = til::print_node(LINE, $3, false); }
-            | '(' tPRINTLN exprs ')'                { $$ = til::print_node(LINE, $3, true); }     
-            | '(' tSTOP opt_int ')'                 { $$ = til::stop_node(LINE, $3); }
-            | '(' tNEXT opt_int ')'                 { $$ = til::next_node(LINE, $3); }
-            | '(' tRETURN expr ')'                  { $$ = til::return_node(LINE, $3); } 
+instruction : expr                                  { $$ = $1; }
+            | '(' tPRINT exprs ')'                  { $$ = new til::print_node(LINE, $3, false); }
+            | '(' tPRINTLN exprs ')'                { $$ = new til::print_node(LINE, $3, true); }     
+            | '(' tSTOP tINTEGER ')'                { $$ = new til::stop_node(LINE, $3); }
+            | '(' tSTOP ')'                         { $$ = new til::stop_node(LINE); }
+            | '(' tNEXT tINTEGER ')'                { $$ = new til::next_node(LINE, $3); }
+            | '(' tNEXT ')'                         { $$ = new til::next_node(LINE); }
+            | '(' tRETURN expr ')'                  { $$ = new til::return_node(LINE, $3); } 
             | conditional_instruction               { $$ = $1; } 
             | iteration_instruction                 { $$ = $1; }  
             | block                                 { $$ = $1; }
-            ;     
-             
-conditional_instruction : '(' tIF expr instruction ')'            { $$ = til::if_node(LINE,$3, $4);}
-                        | '(' tIF expr instruction instruction')' { $$ = til::if_else_node(LINE,$3, $4, $5);}
+            ;
+
+conditional_instruction : '(' tIF expr block ')'            { $$ = new til::if_node(LINE, $3, $4);}
+                        | '(' tIF expr block block')'       { $$ = new til::if_else_node(LINE,$3, $4, $5);}
                         ;
 
-iteration_instruction  : '(' tLOOP expr instruction ')'           { $$ = til::loop_node(LINE,$3, $4);}
+iteration_instruction  : '(' tLOOP expr block ')'           { $$ = new til::loop_node(LINE,$3, $4);}
                        ;
 
-/* INITIALIZATIONS */
-
-opt_global_init : : /* empty */            { $$ = nullptr; }
-                  | global_init            { $$ = $1; }
+opt_global_init :  /* empty */            { $$ = nullptr; }
+                  | global_init           { $$ = $1; }
                   ;
 
 global_init : literal                     { $$ = $1; } 
@@ -197,7 +170,7 @@ fun : '(' tFUNCTION '(' type opt_declarations ')' block ')'     { $$ = new til::
     ;
 
 opt_declarations : /* empty */        { $$ = nullptr; }
-                 | declarations       {$$ = $1;} 
+                 | declarations       { $$ = $1;} 
                  ;  
 
 exprs : expr                 { $$ = new cdk::sequence_node(LINE, $1); }
@@ -220,7 +193,7 @@ expr : literal                   { $$ = $1; }
      | tLE expr expr             { $$ = new cdk::le_node(LINE, $2, $3); }
      | tNE expr expr             { $$ = new cdk::ne_node(LINE, $2, $3); }
      | tEQ expr expr             { $$ = new cdk::eq_node(LINE, $2, $3); }
-     | '~' expr                  { $$ = new cdl::not_node(LINE, $2);}
+     | '~' expr                  { $$ = new cdk::not_node(LINE, $2);}
      | tAND expr expr            { $$ = new cdk::and_node(LINE, $2, $3); }
      | tOR expr expr             { $$ = new cdk::or_node(LINE, $2, $3); }
      | tSET lval expr            { $$ = new cdk::assignment_node(LINE, $2, $3); }
@@ -242,10 +215,6 @@ literal : tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
         | tSTRING               { $$ = new cdk::string_node(LINE, $1); }
         | tNULLPTR              { $$ = new til::nullptr_node(LINE); }
         ;
-
-opt_int : /* empty */           { $$ = nullptr; }
-        | tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
-        ;  
 
 lval : tID                      { $$ = new cdk::variable_node(LINE, $1); }
      ;
