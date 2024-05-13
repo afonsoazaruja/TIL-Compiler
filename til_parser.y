@@ -162,12 +162,12 @@ list : stmt      { $$ = new cdk::sequence_node(LINE, $1); }
      ;
 
 stmt : expr ';'                         { $$ = new til::evaluation_node(LINE, $1); }
-     | tPRINT exprs ';'                 { $$ = new til::print_node(LINE, $2, false); }
-     | tPRINTLN exprs ';'               { $$ = new til::print_node(LINE, $2, true); }
-     | tREAD ';'                        { $$ = new til::read_node(LINE); }
-     | tLOOP '(' expr ')' stmt          { $$ = new til::loop_node(LINE, $3, $5); }
-     | tIF '(' expr ')' stmt %prec tIFX { $$ = new til::if_node(LINE, $3, $5); }
-     | tIF '(' expr ')' stmt tELSE stmt { $$ = new til::if_else_node(LINE, $3, $5, $7); }
+     | '(' tPRINT exprs ')'             { $$ = new til::print_node(LINE, $3, false); }
+     | '(' tPRINTLN exprs ')'           { $$ = new til::print_node(LINE, $3, true); }
+     | '(' tREAD ')'                    { $$ = new til::read_node(LINE); }
+     | '(' tLOOP expr stmt ')'          { $$ = new til::loop_node(LINE, $3, $4); }
+     | '(' tIF expr stmt ')'            { $$ = new til::if_node(LINE, $3, $4); }
+     | '(' tIF expr stmt stmt ')'       { $$ = new til::if_else_node(LINE, $3, $4, $5); }
      | '{' list '}'                     { $$ = $2; }
      ;
 
@@ -176,8 +176,9 @@ exprs : {;} // TODO: IMPLEMENTAR
 
 // ??? FALTAM '(' ')' ???
 expr : literal               { $$ = $1; }
-     | '-' expr %prec tUNARY { $$ = new cdk::unary_minus_node(LINE, $2); }
-     | '+' expr %prec tUNARY { $$ = new cdk::unary_plus_node(LINE, $2); }
+     | '(' expr ')'          { $$ = $2; }
+     | '-' expr              { $$ = new cdk::unary_minus_node(LINE, $2); }
+     | '+' expr              { $$ = new cdk::unary_plus_node(LINE, $2); }
      | '+' expr expr         { $$ = new cdk::add_node(LINE, $2, $3); }
      | '-' expr expr         { $$ = new cdk::sub_node(LINE, $2, $3); }
      | '*' expr expr         { $$ = new cdk::mul_node(LINE, $2, $3); }
@@ -191,9 +192,8 @@ expr : literal               { $$ = $1; }
      | tEQ expr expr         { $$ = new cdk::eq_node(LINE, $2, $3); }
      | tAND expr expr        { $$ = new cdk::and_node(LINE, $2, $3); }
      | tOR expr expr         { $$ = new cdk::or_node(LINE, $2, $3); }
-     | '(' expr ')'          { $$ = $2; }
+     | tSET lval expr        { $$ = new cdk::assignment_node(LINE, $2, $3); }
      | lval                  { $$ = new cdk::rvalue_node(LINE, $1); }
-     | lval '=' expr         { $$ = new cdk::assignment_node(LINE, $1, $3); }
      ;
 
 literal : tINTEGER              { $$ = new cdk::integer_node(LINE, $1); }
