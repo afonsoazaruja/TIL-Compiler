@@ -62,7 +62,7 @@ void til::xml_writer::do_string_node(cdk::string_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_unary_operation(cdk::unary_operation_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   node->argument()->accept(this, lvl + 2);
   closeTag(node, lvl);
@@ -79,7 +79,7 @@ void til::xml_writer::do_unary_plus_node(cdk::unary_plus_node * const node, int 
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_binary_operation(cdk::binary_operation_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   node->left()->accept(this, lvl + 2);
   node->right()->accept(this, lvl + 2);
@@ -123,19 +123,19 @@ void til::xml_writer::do_eq_node(cdk::eq_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_variable_node(cdk::variable_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   os() << std::string(lvl, ' ') << "<" << node->label() << ">" << node->name() << "</" << node->label() << ">" << std::endl;
 }
 
 void til::xml_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   node->lvalue()->accept(this, lvl + 4);
   closeTag(node, lvl);
 }
 
 void til::xml_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
 
   node->lvalue()->accept(this, lvl);
@@ -156,14 +156,14 @@ void til::xml_writer::do_program_node(til::program_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_evaluation_node(til::evaluation_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   node->argument()->accept(this, lvl + 2);
   closeTag(node, lvl);
 }
 
 void til::xml_writer::do_print_node(til::print_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   node->argument()->accept(this, lvl + 2);
   closeTag(node, lvl);
@@ -172,7 +172,7 @@ void til::xml_writer::do_print_node(til::print_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_read_node(til::read_node * const node, int lvl) {
-  // ASSERT_SAFE_EXPRESSIONS;
+  // // ASSERT_SAFE_EXPRESSIONS;
   // openTag(node, lvl);
   // node->argument()->accept(this, lvl + 2);
   // closeTag(node, lvl);
@@ -181,7 +181,7 @@ void til::xml_writer::do_read_node(til::read_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_loop_node(til::loop_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   openTag("condition", lvl + 2);
   node->condition()->accept(this, lvl + 4);
@@ -195,7 +195,7 @@ void til::xml_writer::do_loop_node(til::loop_node * const node, int lvl) {
 //---------------------------------------------------------------------------
 
 void til::xml_writer::do_if_node(til::if_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   openTag("condition", lvl + 2);
   node->condition()->accept(this, lvl + 4);
@@ -207,7 +207,7 @@ void til::xml_writer::do_if_node(til::if_node * const node, int lvl) {
 }
 
 void til::xml_writer::do_if_else_node(til::if_else_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
+  // ASSERT_SAFE_EXPRESSIONS;
   openTag(node, lvl);
   openTag("condition", lvl + 2);
   node->condition()->accept(this, lvl + 4);
@@ -231,7 +231,7 @@ void til::xml_writer::do_declaration_node(til::declaration_node *const node, int
   os() << std::string(lvl, ' ') << "<" << node->label() << " qualifier='"
        << get_qualifier(node->qualifier()) << "' identifier='" << node->identifier() << "' type='"
        << type << "'>" << std::endl;
-  
+
   if (node->init()) {
     openTag("init", lvl + 2);
     node->init()->accept(this, lvl + 4);
@@ -247,8 +247,7 @@ void til::xml_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {
 
 void til::xml_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {
   os() << std::string(lvl, ' ') << "<" << node->label() << " type='"
-       << cdk::to_string(node->type())
-       << std::endl;
+       << cdk::to_string(node->type()) << "'>" << std::endl;
   if (node->arguments()) {
     openTag("arguments", lvl + 2);
     node->arguments()->accept(this, lvl + 4);
