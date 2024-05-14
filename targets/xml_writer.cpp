@@ -231,7 +231,7 @@ void til::xml_writer::do_declaration_node(til::declaration_node *const node, int
   os() << std::string(lvl, ' ') << "<" << node->label() << " qualifier='"
        << get_qualifier(node->qualifier()) << "' identifier='" << node->identifier() << "' type='"
        << type << "'>" << std::endl;
-
+  
   if (node->init()) {
     openTag("init", lvl + 2);
     node->init()->accept(this, lvl + 4);
@@ -270,7 +270,7 @@ void til::xml_writer::do_block_node(til::block_node *const node, int lvl) {
   if (node->instructions()) {
     openTag("instructions", lvl + 2);
     node->instructions()->accept(this, lvl + 4);
-    closeTag("isntructions", lvl + 2);
+    closeTag("instructions", lvl + 2);
   }
   closeTag(node, lvl);
 }
