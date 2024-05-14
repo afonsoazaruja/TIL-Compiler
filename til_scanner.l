@@ -65,7 +65,7 @@ EXP [eE][+-]?[0-9]+
 [0-9]+                  yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
 
 "0x"                    yy_push_state(X_HEXNUM);
-<X_HEXNUM>[0-9a-fA-F]+  yylval.i = strtol(yytext, nullptr, 16); return tINTEGER; 
+<X_HEXNUM>[0-9a-fA-F]+  yylval.i = strtol(yytext, nullptr, 16); yy_pop_state(); return tINTEGER; 
 
   /*
   / 3.8.3 - CADEIAS DE CARACTERES

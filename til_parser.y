@@ -75,7 +75,7 @@ file         : /* empty */                           { compiler->ast($$ = new cd
              | global_declarations  program          { compiler->ast($$ = new cdk::sequence_node(LINE, $2, $1)); }
              ;
 
-program : '(' tPROGRAM block ')' { $$ = new til::program_node(LINE, $3); }
+program : '(' tPROGRAM impl_block ')' { $$ = new til::program_node(LINE, $3); }
         ;
 
 global_declarations      : global_declaration                       { $$ = new cdk::sequence_node(LINE, $1); }
@@ -90,8 +90,8 @@ global_declaration         : '(' tEXTERNAL fun_type tID            ')'     { $$ 
                            | '(' opt_var tID global_init           ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
 
 opt_var : /* empty */                   { $$ = nullptr; }
-    | var                               { $$ = $1; }
-    ;
+        | var                           { $$ = $1; }
+        ;
 
 var : tVAR                              { $$ = cdk::primitive_type::create(0, cdk::TYPE_UNSPEC); }
       ;
@@ -123,9 +123,9 @@ impl_block  : /* empty */                              { $$ = new til::block_nod
             | declarations instructions     { $$ = new til::block_node(LINE, $1, $2);}
             ;
 
-declarations      : declaration                     { $$ = new cdk::sequence_node(LINE, $1); }
-                  | declarations declaration        { $$ = new cdk::sequence_node(LINE, $2, $1); }
-                  ;
+declarations : declaration                     { $$ = new cdk::sequence_node(LINE, $1); }
+             | declarations declaration        { $$ = new cdk::sequence_node(LINE, $2, $1); }
+             ;
 
 declaration    : '(' type tID opt_init      ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
                | '(' var tID init           ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
