@@ -66,9 +66,9 @@ EXP [eE][+-]?[0-9]+
 [0-9]+                  yylval.i = strtol(yytext, nullptr, 10); return tINTEGER; /* já estava no Simple */
 
 "0x"                    yy_push_state(X_HEXNUM);
-<x_HEXNUM>0* 		yyerror("Invalid zero representation");
+<X_HEXNUM>0* 		yyerror("Invalid zero representation"); yy_pop_state();
 <X_HEXNUM>[0-9a-fA-F]+  yylval.i = strtol(yytext, nullptr, 16); yy_pop_state(); return tINTEGER; 
-<x_HEXNUM>[0-9a-zA-Z]+  yyerror("Invalid Base Number");
+<X_HEXNUM>[0-9a-zA-Z]+  yyerror("Invalid Base Number"); yy_pop_state();
 
   /*
   / 3.8.3 - CADEIAS DE CARACTERES
@@ -96,13 +96,18 @@ EXP [eE][+-]?[0-9]+
 <X_BACKSLASH>0              yy_push_state(X_IGNORE_STRING); /* End of String */
 
 <X_BACKSLASH>[0-7]{1,3}     {
-                            unsigned long num = std::stoi(yytext, NULL, 8);
-                            if (num > 255) {
-                              yyerror("Invalid 8 bit Number");
-                            }
-                            strliteral << (char)(unsigned char) num;
-                            yy_pop_state();
-                            }
+                            
+			    try {
+				unsigned long num = std::stoi(yytext, NULL, 8);
+                            	if (num > 255) {
+                              		yyerror("Invalid 8 bit Number");
+                            	}
+                           	 strliteral << (char)(unsigned char) num;
+                           	 yy_pop_state();
+                            } catch(const std::out_of_range &e){
+				yyerror("octal escape sequence out of range");	
+				}
+			}
 
 <X_BACKSLASH>.              strliteral << *yytext; yy_pop_state();
 
