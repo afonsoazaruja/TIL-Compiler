@@ -47,17 +47,10 @@
 %token tAND tOR tPROGRAM
 %token tEXTERNAL tFORWARD tPUBLIC tVAR tPRIVATE
 %token tNULLPTR
+%token tGE tLE tEQ tNE
 
-%nonassoc tIF
-
-%right '='
-%left tGE tLE tEQ tNE '>' '<'
-%left '+' '-'
-%left '*' '/' '%'
-%nonassoc tUNARY
-
-%type <sequence> file declarations exprs instructions global_declarations 
-%type <node> program declaration instruction global_declaration conditional_instruction iteration_instruction
+%type <sequence> declarations exprs instructions global_declarations 
+%type <node> file program declaration instruction global_declaration conditional_instruction iteration_instruction
 %type <expression> expr literal init global_init fun
 %type <lvalue> lval
 %type <type> type fun_type var
@@ -69,11 +62,11 @@
 %}
 %%
 
-file         : /* empty */                           { compiler->ast($$ = new cdk::sequence_node(LINE)); }
-             | global_declarations                   { compiler->ast($$ = $1); }
-             |                      program          { compiler->ast($$ = new cdk::sequence_node(LINE, $1)); }
-             | global_declarations  program          { compiler->ast($$ = new cdk::sequence_node(LINE, $2, $1)); }
-             ;
+file : /* empty */                           { compiler->ast($$ = new cdk::sequence_node(LINE)); }
+     | global_declarations                   { compiler->ast($$ = $1); }
+     |                      program          { compiler->ast($$ = new cdk::sequence_node(LINE, $1)); }
+     | global_declarations  program          { compiler->ast($$ = new cdk::sequence_node(LINE, $2, $1)); }
+     ;
 
 program : '(' tPROGRAM block ')'    { $$ = new til::program_node(LINE, $3); }
         ;
@@ -94,7 +87,7 @@ global_declaration         : '(' tEXTERNAL fun_type tID ')'             { $$ = n
                            | '(' tID global_init ')'                    { $$ = new til::declaration_node(LINE, tPRIVATE, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC), *$2, $3); delete $2; }
 
 var : tVAR  { $$ = cdk::primitive_type::create(0, cdk::TYPE_UNSPEC); }
-      ;
+    ;
 
 types : type            { $$ = new std::vector<std::shared_ptr<cdk::basic_type>>(); $$->push_back($1); }
       | types type      { $$ = $1; $$->push_back($2); }
