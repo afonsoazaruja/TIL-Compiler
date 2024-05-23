@@ -38,6 +38,11 @@ namespace til {
       return oss.str();
     }
 
+    /** print error messages. */
+    void error(int lineno, std::string e) {
+      std::cerr << lineno << ": " << e << std::endl;
+    }
+
   public:
   // do not edit these lines
 #define __IN_VISITOR_HEADER__

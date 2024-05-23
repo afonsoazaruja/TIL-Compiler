@@ -193,6 +193,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   // these are just a few library function imports
   _pf.EXTERN("readi");
   _pf.EXTERN("printi");
+  _pf.EXTERN("printd");
   _pf.EXTERN("prints");
   _pf.EXTERN("println");
 }
@@ -214,28 +215,34 @@ void til::postfix_writer::do_evaluation_node(til::evaluation_node * const node, 
 
 void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
   // ASSERT_SAFE_EXPRESSIONS;
-  // node->argument()->accept(this, lvl); // determine the value to print
-  // if (node->argument()->is_typed(cdk::TYPE_INT)) {
-  //   _pf.CALL("printi");
-  //   _pf.TRASH(4); // delete the printed value
-  // } else if (node->argument()->is_typed(cdk::TYPE_STRING)) {
-  //   _pf.CALL("prints");
-  //   _pf.TRASH(4); // delete the printed value's address
-  // } else {
-  //   std::cerr << "ERROR: CANNOT HAPPEN!" << std::endl;
-  //   exit(1);
-  // }
-  // _pf.CALL("println"); // print a newline
+  for (size_t ix = 0; ix < node->argument()->size(); ix++) {
+    const auto arg =
+        dynamic_cast<cdk::expression_node *>(node->argument()->node(ix));
+    arg->accept(this, lvl); // determine the value to print
+    if (arg->is_typed(cdk::TYPE_INT)) {
+      _pf.CALL("printi");
+      _pf.TRASH(4);
+    } else if (arg->is_typed(cdk::TYPE_DOUBLE)) {
+      _pf.CALL("printd");
+      _pf.TRASH(8);
+    } else if (arg->is_typed(cdk::TYPE_STRING)) {
+      _pf.CALL("prints");
+      _pf.TRASH(4);
+    } else
+      error(node->lineno(), "cannot print expression of unknown type");
+  }
+  if (node->newLine()) {
+    _pf.CALL("println");
+  }
 }
 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
   // ASSERT_SAFE_EXPRESSIONS;
-  // _pf.CALL("readi");
-  // _pf.LDFVAL32();
-  // node->argument()->accept(this, lvl);
-  // _pf.STINT();
+  _pf.CALL("readi");
+  _pf.LDFVAL32();
+  _pf.STINT();
 }
 
 //---------------------------------------------------------------------------
@@ -294,7 +301,9 @@ void til::postfix_writer::do_address_of_node(til::address_of_node *const node, i
 
 void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {}
 
-void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {}
+void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
+  _pf.RET();
+}
 
 void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {}
 
