@@ -191,7 +191,7 @@ EXP [eE][+-]?[0-9]+
   / 3.7 - IDENTIFICADORES
   */
 
-[A-Za-z][A-Za-z0-9_]*  yylval.s = new std::string(yytext); return tID;
+[A-Za-z][A-Za-z0-9]*  yylval.s = new std::string(yytext); return tID;
 
   /*
   / 3.1 - CARACTERES BRANCOS
