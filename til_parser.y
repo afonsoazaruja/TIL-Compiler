@@ -108,8 +108,8 @@ void_pointer : void_pointer '!'    { $$ = $1; }
              | tVOID_TYPE '!'      { $$ = cdk::reference_type::create(4, cdk::primitive_type::create(0, cdk::TYPE_VOID)); }
              ;
 
-fun_type : '(' return_type ')'               { $$ = cdk::functional_type::create($2); }
-         | '(' return_type '(' var_types ')' { $$ = cdk::functional_type::create(*$4, $2); delete $4; }
+fun_type : '(' return_type ')'                    { $$ = cdk::functional_type::create($2); }
+         | '(' return_type '(' var_types ')' ')'  { $$ = cdk::functional_type::create(*$4, $2); delete $4; }
          ;
 
 return_type : var_type   { $$ = $1; }
