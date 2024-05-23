@@ -53,8 +53,8 @@
 %type <node> file program declaration instruction global_declaration conditional_instruction iteration_instruction
 %type <expression> expr literal init global_init fun
 %type <lvalue> lval
-%type <type> type fun_type var
-%type <types> types
+%type <type> data_type fun_type void_pointer return_type var_type var
+%type <types> var_types
 %type <block> block
 
 %{
@@ -75,35 +75,46 @@ global_declarations      : global_declaration                           { $$ = n
                          | global_declarations global_declaration       { $$ = new cdk::sequence_node(LINE, $2, $1); }
                          ;
 
-global_declaration         : '(' tEXTERNAL fun_type tID ')'             { $$ = new til::declaration_node(LINE, tEXTERNAL, $3, *$4, nullptr); delete $4; }
-                           | '(' tFORWARD fun_type tID ')'              { $$ = new til::declaration_node(LINE, tFORWARD, $3, *$4, nullptr); delete $4; }
-                           | '(' tPUBLIC type tID global_init ')'       { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, $5); delete $4; }
-                           | '(' tPUBLIC type tID ')'                   { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, nullptr); delete $4; }
-                           | '(' tPUBLIC var tID global_init ')'        { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, $5); delete $4; }
-                           | '(' tPUBLIC tID global_init ')'            { $$ = new til::declaration_node(LINE, tPUBLIC, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC), *$3, $4); delete $3; }
-                           | '(' type tID global_init ')'               { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
-                           | '(' type tID ')'                           { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, nullptr); delete $3; }
-                           | '(' var tID global_init ')'                { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
-                           | '(' tID global_init ')'                    { $$ = new til::declaration_node(LINE, tPRIVATE, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC), *$2, $3); delete $2; }
+global_declaration         : '(' tEXTERNAL fun_type tID ')'           { $$ = new til::declaration_node(LINE, tEXTERNAL, $3, *$4, nullptr); delete $4; }
+                           | '(' tFORWARD fun_type tID ')'            { $$ = new til::declaration_node(LINE, tFORWARD, $3, *$4, nullptr); delete $4; }
+                           | '(' tPUBLIC var_type tID global_init ')' { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, $5); delete $4; }
+                           | '(' tPUBLIC var_type tID ')'             { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, nullptr); delete $4; }
+                           | '(' tPUBLIC var tID global_init ')'      { $$ = new til::declaration_node(LINE, tPUBLIC, $3, *$4, $5); delete $4; }
+                           | '(' tPUBLIC tID global_init ')'          { $$ = new til::declaration_node(LINE, tPUBLIC, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC), *$3, $4); delete $3; }
+                           | '(' var_type tID global_init ')'         { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
+                           | '(' var_type tID ')'                     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, nullptr); delete $3; }
+                           | '(' var tID global_init ')'              { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
+                           | '(' tID global_init ')'                  { $$ = new til::declaration_node(LINE, tPRIVATE, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC), *$2, $3); delete $2; }
 
 var : tVAR  { $$ = cdk::primitive_type::create(0, cdk::TYPE_UNSPEC); }
     ;
 
-types : type            { $$ = new std::vector<std::shared_ptr<cdk::basic_type>>(); $$->push_back($1); }
-      | types type      { $$ = $1; $$->push_back($2); }
-      ;
+var_types : var_type            { $$ = new std::vector<std::shared_ptr<cdk::basic_type>>(); $$->push_back($1); }
+          | var_types var_type      { $$ = $1; $$->push_back($2); }
+          ;
 
-type : tINT_TYPE        { $$ = cdk::primitive_type::create(4, cdk::TYPE_INT); }
-     | tDOUBLE_TYPE     { $$ = cdk::primitive_type::create(8, cdk::TYPE_DOUBLE); }
-     | tSTRING_TYPE     { $$ = cdk::primitive_type::create(4, cdk::TYPE_STRING); }
-     | tVOID_TYPE       { $$ = cdk::primitive_type::create(0, cdk::TYPE_VOID); }
-     | type '!'         { $$ = cdk::reference_type::create(4, $1); }                       
-     | fun_type         { $$ = $1; }
-     ;
+data_type : tINT_TYPE         { $$ = cdk::primitive_type::create(4, cdk::TYPE_INT); }
+          | tDOUBLE_TYPE      { $$ = cdk::primitive_type::create(8, cdk::TYPE_DOUBLE); }
+          | tSTRING_TYPE      { $$ = cdk::primitive_type::create(4, cdk::TYPE_STRING); }
+          | fun_type          { $$ = $1; }
+          | data_type '!'     { $$ = cdk::reference_type::create(4, $1); }
+          ;
 
-fun_type : '(' type ')'                   { $$ = cdk::functional_type::create($2); }
-         | '(' type '(' types ')' ')'     { $$ = cdk::functional_type::create(*$4, $2); delete $4; }
+var_type : data_type     { $$ = $1; }
+         | void_pointer  { $$ = $1; }
          ;
+
+void_pointer : void_pointer '!'    { $$ = $1; }
+             | tVOID_TYPE '!'      { $$ = cdk::reference_type::create(4, cdk::primitive_type::create(0, cdk::TYPE_VOID)); }
+             ;
+
+fun_type : '(' return_type ')'               { $$ = cdk::functional_type::create($2); }
+         | '(' return_type '(' var_types ')' { $$ = cdk::functional_type::create(*$4, $2); delete $4; }
+         ;
+
+return_type : var_type   { $$ = $1; }
+            | tVOID_TYPE { $$ = cdk::primitive_type::create(0, cdk::TYPE_VOID); }
+            ;
 
 block : /* empty */                 { $$ = new til::block_node(LINE, nullptr, nullptr);}
       | declarations                { $$ = new til::block_node(LINE, $1, nullptr);}
@@ -115,9 +126,9 @@ declarations : declaration                { $$ = new cdk::sequence_node(LINE, $1
              | declarations declaration   { $$ = new cdk::sequence_node(LINE, $2, $1); }
              ;
 
-declaration    : '(' type tID init ')'    { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
-               | '(' type tID ')'         { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, nullptr); delete $3; }
-               | '(' var tID init ')'     { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
+declaration    : '(' var_type tID init ')'   { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
+               | '(' var_type tID ')'        { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, nullptr); delete $3; }
+               | '(' var tID init ')'        { $$ = new til::declaration_node(LINE, tPRIVATE, $2, *$3, $4); delete $3; }
                ;
 
 instructions : instruction                { $$ = new cdk::sequence_node(LINE, $1); }
@@ -152,8 +163,8 @@ init : expr { $$ = $1; }
      ;
 
 
-fun : '(' tFUNCTION '(' type declarations ')' block ')'     { $$ = new til::function_definition_node(LINE, $4, $5, $7);}
-    | '(' tFUNCTION '(' type ')' block ')'                  { $$ = new til::function_definition_node(LINE, $4, new cdk::sequence_node(LINE), $6);}
+fun : '(' tFUNCTION '(' return_type declarations ')' block ')'     { $$ = new til::function_definition_node(LINE, $4, $5, $7);}
+    | '(' tFUNCTION '(' return_type ')' block ')'                  { $$ = new til::function_definition_node(LINE, $4, new cdk::sequence_node(LINE), $6);}
     ;
 
 exprs : expr            { $$ = new cdk::sequence_node(LINE, $1); }
