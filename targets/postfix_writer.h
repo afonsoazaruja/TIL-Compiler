@@ -16,6 +16,12 @@ namespace til {
     cdk::basic_postfix_emitter &_pf;
     int _lbl;
 
+    // semantic analysis
+    bool _inFunctionBody = false;
+    bool _inFunctionArgs = false;
+    bool _mainReturnSeen = false;
+    bool _lastBlockInstructionSeen = false;
+    
   public:
     postfix_writer(std::shared_ptr<cdk::compiler> compiler, cdk::symbol_table<til::symbol> &symtab,
                    cdk::basic_postfix_emitter &pf) :
@@ -28,6 +34,10 @@ namespace til {
     }
 
   private:
+    void processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl);
+
+    void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
+
     /** Method used to generate sequential labels. */
     inline std::string mklbl(int lbl) {
       std::ostringstream oss;

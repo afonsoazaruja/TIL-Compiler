@@ -4,7 +4,7 @@
 #include "targets/postfix_writer.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
 
-//---------------------------------------------------------------------------
+//-------------------------------------EMPTY---------------------------------
 
 void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
   // EMPTY
@@ -12,17 +12,24 @@ void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
 void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
   // EMPTY
 }
+//---------------------------------------------------------------------------
+
+
+
 void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
-  // EMPTY
+  
 }
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
-  // EMPTY
+  ASSERT_SAFE_EXPRESSIONS;
+  node->argument()->accept(this, lvl + 2);
+  _pf.INT(0);
+  _pf.EQ();
 }
 void til::postfix_writer::do_and_node(cdk::and_node * const node, int lvl) {
-  // EMPTY
+
 }
 void til::postfix_writer::do_or_node(cdk::or_node * const node, int lvl) {
-  // EMPTY
+  
 }
 
 //---------------------------------------------------------------------------
@@ -36,7 +43,12 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
-  _pf.INT(node->value()); // push an integer
+  if (_inFunctionBody) {
+    _pf.INT(node->value()); // stored during function scope
+  }
+  else {
+    _pf.SINT(node->value()); // stored globally
+  }
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
@@ -80,58 +92,96 @@ void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
   node->right()->accept(this, lvl);
   _pf.SUB();
 }
+
+void til::postfix_writer::processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  node->left()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->left()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+
+  node->right()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) &&
+      !node->right()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+}
+
 void til::postfix_writer::do_mul_node(cdk::mul_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.MUL();
+  processTypeMultiplicative(node, lvl);
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DMUL();
+  } else {
+    _pf.MUL();
+  }
 }
 void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.DIV();
+  processTypeMultiplicative(node, lvl);
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DMUL();
+  } else {
+    _pf.MUL();
+  }
 }
-void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) {
+void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) { 
+  // only works with integers
+  // TODO: verificar
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.MOD();
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    error(node->lineno(), "integer expression expected");
+  }
+  else {
+    _pf.MOD();
+  }
 }
+
+void til::postfix_writer::processLogicalExpression(cdk::binary_operation_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  node->left()->accept(this, lvl + 2);
+  if (!node->left()->is_typed(cdk::TYPE_DOUBLE) && node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.I2D();
+  }
+  
+  node->right()->accept(this, lvl + 2);
+  if (node->left()->is_typed(cdk::TYPE_DOUBLE) && !node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.I2D();
+  }
+
+  if (node->left()->is_typed(cdk::TYPE_DOUBLE) && node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.DCMP();
+    _pf.INT(0);
+  }
+}
+
 void til::postfix_writer::do_lt_node(cdk::lt_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.LT();
 }
 void til::postfix_writer::do_le_node(cdk::le_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.LE();
 }
 void til::postfix_writer::do_ge_node(cdk::ge_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.GE();
 }
 void til::postfix_writer::do_gt_node(cdk::gt_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.GT();
 }
 void til::postfix_writer::do_ne_node(cdk::ne_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.NE();
 }
 void til::postfix_writer::do_eq_node(cdk::eq_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
+  processLogicalExpression(node, lvl);
   _pf.EQ();
 }
 
