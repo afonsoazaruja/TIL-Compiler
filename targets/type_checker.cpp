@@ -163,7 +163,7 @@ void til::type_checker::do_program_node(til::program_node *const node, int lvl) 
 
 void til::type_checker::do_evaluation_node(til::evaluation_node *const node, int lvl) {
   node->argument()->accept(this, lvl + 2);
-}
+}program
 
 void til::type_checker::do_print_node(til::print_node *const node, int lvl) {
   node->argument()->accept(this, lvl + 2);

@@ -3,6 +3,7 @@
 
 #include "targets/basic_ast_visitor.h"
 
+#include <set>
 #include <sstream>
 #include <cdk/emitters/basic_postfix_emitter.h>
 
@@ -14,6 +15,9 @@ namespace til {
   class postfix_writer: public basic_ast_visitor {
     cdk::symbol_table<til::symbol> &_symtab;
     cdk::basic_postfix_emitter &_pf;
+  
+    std::set<std::string> _symbolsToDeclare;
+
     int _lbl;
 
     // semantic analysis
@@ -21,7 +25,12 @@ namespace til {
     bool _inFunctionArgs = false;
     bool _mainReturnSeen = false;
     bool _lastBlockInstructionSeen = false;
-    
+
+    std::vector<std::string> _functionLabels;
+    std::vector<std::shared_ptr<til::symbol>> _functions;
+
+    int _offset = 0;    // current frame pointer offset -- 0 means no vars define
+
   public:
     postfix_writer(std::shared_ptr<cdk::compiler> compiler, cdk::symbol_table<til::symbol> &symtab,
                    cdk::basic_postfix_emitter &pf) :
@@ -38,6 +47,12 @@ namespace til {
 
     void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
 
+    void processLocalVariableInitialization(std::shared_ptr<til::symbol> symbol,
+    cdk::expression_node *const initializer, int lvl);
+
+    void processGlobalVariableInitialization(std::shared_ptr<til::symbol> symbol,
+    cdk::expression_node *const initializer, int lvl);
+    
     /** Method used to generate sequential labels. */
     inline std::string mklbl(int lbl) {
       std::ostringstream oss;

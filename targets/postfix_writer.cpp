@@ -4,6 +4,8 @@
 #include "targets/postfix_writer.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
 
+#include "til_parser.tab.h"
+
 //-------------------------------------EMPTY---------------------------------
 
 void til::postfix_writer::do_nil_node(cdk::nil_node * const node, int lvl) {
@@ -26,6 +28,15 @@ void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
   _pf.EQ();
 }
 void til::postfix_writer::do_and_node(cdk::and_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  const auto lbl = mklbl(++_lbl);
+  node->left()->accept(this, lvl + 2);
+  _pf.DUP32();
+  _pf.JZ(lbl);
+  node->right()->accept(this, lvl + 2);
+  _pf.AND();
+  _pf.ALIGN();
+  _pf.LABEL(lbl);
 
 }
 void til::postfix_writer::do_or_node(cdk::or_node * const node, int lvl) {
@@ -148,7 +159,7 @@ void til::postfix_writer::processLogicalExpression(cdk::binary_operation_node *c
     _pf.I2D();
   }
 
-  if (node->left()->is_typed(cdk::TYPE_DOUBLE) && node->right()->is_typed(cdk::TYPE_DOUBLE)) {
+  if (node->left()->is_typed(cdk::TYPE_DOUBLE) || node->right()->is_typed(cdk::TYPE_DOUBLE)) {
     _pf.DCMP();
     _pf.INT(0);
   }
@@ -226,6 +237,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   // main function node.
 
   // generate the main function (RTS mandates that its name be "_main")
+  _pf.BSS();
   _pf.TEXT();
   _pf.ALIGN();
   _pf.GLOBAL("_main", _pf.FUNC());
@@ -239,6 +251,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   _pf.STFVAL32();
   _pf.LEAVE();
   _pf.RET();
+  
 
   // these are just a few library function imports
   _pf.EXTERN("readi");
@@ -333,13 +346,127 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 
 //----------------------------------NEW--------------------------------------
 
-void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {}
+void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  const auto id = node->identifier();
+  const auto type_size = node->type()->size();
+  int offset = 0;
+
+  if (_inFunctionArgs) {
+    offset = _offset;
+    _offset += type_size;
+  } else if (_inFunctionBody) {
+    _offset -= type_size;
+    offset = _offset;
+  }
+
+  const auto symbol = new_symbol();
+  if (symbol) {
+    symbol->set_offset(offset);
+    reset_new_symbol();
+  }
+
+  // we may still need to initialize the variable
+  if (node->init()) {
+    if (_inFunctionBody)
+      processLocalVariableInitialization(symbol, node->init(), lvl);
+    else
+      processGlobalVariableInitialization(symbol, node->init(), lvl);
+    _symbolsToDeclare.erase(symbol->name());
+  } else if (!_inFunctionArgs && !_inFunctionBody)
+    _symbolsToDeclare.insert(symbol->name());
+}
+
+void til::postfix_writer::processLocalVariableInitialization(
+    std::shared_ptr<til::symbol> symbol,
+    cdk::expression_node *const initializer, int lvl) {
+  initializer->accept(this, lvl);
+  switch (symbol->type()->name()) {
+  case cdk::TYPE_INT:
+  case cdk::TYPE_STRING:
+  case cdk::TYPE_POINTER:
+  case cdk::TYPE_FUNCTIONAL:
+  case cdk::TYPE_UNSPEC: // cases such as `auto x = input;`
+    _pf.LOCAL(symbol->offset());
+    _pf.STINT();
+    break;
+  case cdk::TYPE_DOUBLE:
+    if (initializer->is_typed(cdk::TYPE_INT))
+      _pf.I2D();
+    _pf.LOCAL(symbol->offset());
+    _pf.STDOUBLE();
+    break;
+  default:
+    error(initializer->lineno(), "invalid type for variable initialization");
+  }
+}
+
+void til::postfix_writer::processGlobalVariableInitialization(
+    std::shared_ptr<til::symbol> symbol,
+    cdk::expression_node *const initializer, int lvl) {
+  switch (symbol->type()->name()) {
+    case cdk::TYPE_INT:
+    case cdk::TYPE_STRING:
+    case cdk::TYPE_POINTER:
+      _pf.DATA(); // Data segment, for global variables
+      _pf.ALIGN();
+      _pf.LABEL(symbol->name());
+      initializer->accept(this, lvl + 2);
+      break;
+    case cdk::TYPE_DOUBLE:
+      _pf.DATA(); // Data segment, for global variables
+      _pf.ALIGN();
+      _pf.LABEL(symbol->name());
+
+      // the following initializations need to be done outside of the switch
+      const cdk::integer_node *dclini;
+      cdk::double_node *ddi;
+      switch (initializer->type()->name()) {
+        case cdk::TYPE_INT:
+          // here, we actually want to initialize the variable with a double
+          // thus, we need to convert the expression to a double node
+          // NOTE: I don't like these variable names either, taken from DM
+          dclini = dynamic_cast<const cdk::integer_node *>(initializer);
+          ddi = new cdk::double_node(dclini->lineno(), dclini->value());
+          ddi->accept(this, lvl + 2);
+          break;
+        case cdk::TYPE_DOUBLE:
+          initializer->accept(this, lvl + 2);
+          break;
+        default:
+          error(initializer->lineno(),
+                "invalid type for double variable initialization");
+      }
+      break;
+    case cdk::TYPE_FUNCTIONAL:
+      _functions.push_back(symbol);
+      initializer->accept(this, lvl);
+      _pf.DATA(); // Data segment, for global variables
+      _pf.ALIGN();
+      if (symbol->qualifier() == tPUBLIC)
+        _pf.GLOBAL(symbol->name(), _pf.OBJ());
+      _pf.LABEL(symbol->name());
+      _pf.SADDR(_functionLabels.back());
+      break;
+    default:
+      error(initializer->lineno(), "invalid type for variable initialization");
+  }
+}
+
+
 
 void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
 
 void til::postfix_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
 
-void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {}
+void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
+  _symtab.push();
+  if (node->declarations())
+    node->declarations()->accept(this, lvl + 2);
+  if (node->instructions())
+    node->instructions()->accept(this, lvl + 2);
+  _symtab.pop();
+}
 
 void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {}
 
@@ -347,7 +474,10 @@ void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node,
 
 void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {}
 
-void til::postfix_writer::do_address_of_node(til::address_of_node *const node, int lvl) {}
+void til::postfix_writer::do_address_of_node(til::address_of_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  node->lvalue()->accept(this, lvl + 2);
+}
 
 void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {}
 
