@@ -17,7 +17,7 @@ namespace til {
         cdk::basic_node(lineno), _arguments(arguments), _newLine(newLine) {
     }
 
-    cdk::sequence_node *argument() { return _arguments; }
+    cdk::sequence_node *arguments() { return _arguments; }
 
     bool newLine(){ return _newLine; }
 
