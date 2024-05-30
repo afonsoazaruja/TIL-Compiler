@@ -403,7 +403,7 @@ void til::type_checker::do_declaration_node(til::declaration_node *const node, i
     }
   }
   
-  const auto new_sym = til::create_symbol(node->type(), node->identifier(), (bool)node->init(), node->qualifier());
+  const auto new_sym = til::make_symbol(node->type(), node->identifier(), (bool)node->init(), node->qualifier());
   if (!_symtab.insert(node->identifier(), new_sym)) { // symbol already exists
     const auto prev_sym = _symtab.find_local(node->identifier());
     if (prev_sym->type()->name() != new_sym->type()->name()) // symbol with different type
@@ -418,16 +418,44 @@ void til::type_checker::do_nullptr_node(til::nullptr_node *const node, int lvl) 
   node->type(cdk::reference_type::create(4, cdk::primitive_type::create(0, cdk::TYPE_VOID)));
 }
 
-void til::type_checker::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
-
-
-void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {}
-
-void til::type_checker::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
-  ASSERT_UNSPEC;
+void til::type_checker::do_function_definition_node(til::function_definition_node *const node, int lvl) {
+  // EMPTY
 }
 
 
+void til::type_checker::do_function_call_node(til::function_call_node *const node, int lvl) {\
+  ASSERT_UNSPEC;
+
+  std::vector<std::shared_ptr<cdk::basic_type>> argsTypes;
+
+  if (node->function()) { // regular function call
+    node->function()->accept(this, lvl + 2);
+    if(!node->function()->is_typed(cdk::TYPE_FUNCTIONAL))
+      throw std::string("Incorrect type in function call expression");
+
+    const auto &type = node->function()->type();
+    argsTypes = cdk::functional_type::cast(type)->input()->components();
+    node->type(cdk::functional_type::cast(type)->output(0));
+    
+  } else { //recursive function call
+    auto sym = _symtab.find("@");
+    if(!sym)
+      throw std::string("Recursive call not allowed in the current scope");
+
+    const auto &type = sym->type();
+    argsTypes = cdk::functional_type::cast(type)->input()->components();
+    node->type(cdk::functional_type::cast(type)->output(0));
+  }
+}
+
+void til::type_checker::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+  ASSERT_UNSPEC;
+  node->argument()->accept(this, lvl + 2);
+  if (node->argument()->is_typed(cdk::TYPE_INT))
+    node->type(cdk::reference_type::create(4, cdk::primitive_type::create(0, cdk::TYPE_UNSPEC)));
+  else
+    throw std::string("wrong type: stack alloc");
+}
 
 void til::type_checker::do_address_of_node(til::address_of_node *const node, int lvl) {
   ASSERT_UNSPEC;
@@ -436,9 +464,50 @@ void til::type_checker::do_address_of_node(til::address_of_node *const node, int
 }
 
 
-void til::type_checker::do_return_node(til::return_node *const node, int lvl) {}
+void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
+  const auto function = _symtab.find("@");
+  const auto ret_val = node->retval(); // return value
+  if (!function) { // we may be in main
+    const auto main = _symtab.find("_main");
+    if (main) {
+      if (!ret_val)
+        throw std::string("wrong type of return value in main - int expected");
+      
+      ret_val->accept(this, lvl + 2);
+      
+      if (!ret_val->is_typed(cdk::TYPE_INT))
+        throw std::string("wrong type of return value in main - int expected");
+      return;
+    }
+    throw std::string("return statement found outside function");
+  } else if (!ret_val) {
+    return;
+  }
 
-void til::type_checker::do_index_node(til::index_node *const node, int lvl) {}
+  const auto &funSymType = cdk::functional_type::cast(function->type());
+  const auto functionOutput = funSymType->output(0);
+  const bool hasOutput = funSymType->output() != nullptr;
+
+  if (hasOutput && functionOutput->name() == cdk::TYPE_VOID)
+    throw std::string("return with a value in void function");
+  else if (!hasOutput)
+    throw std::string("unknown return type in function");
+
+  ret_val->accept(this, lvl + 2);
+  throwIncompatibleTypes(functionOutput, ret_val->type(), true);
+}
+
+void til::type_checker::do_index_node(til::index_node *const node, int lvl) {
+  ASSERT_UNSPEC;
+  node->base()->accept(this, lvl + 2);
+  if (node->base()->is_typed(cdk::TYPE_POINTER))
+    throw std::string("wrong type: base of index");
+  node->index()->accept(this, lvl + 2);
+  if (!node->index()->is_typed(cdk::TYPE_INT))
+    throw std::string("wrong type: index of index");
+  const auto base_ref = cdk::reference_type::cast(node->base()->type())->referenced();
+  node->type(base_ref);
+}
 
 void til::type_checker::do_sizeof_node(til::sizeof_node *const node, int lvl) {
   ASSERT_UNSPEC;

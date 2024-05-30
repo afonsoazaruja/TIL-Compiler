@@ -308,7 +308,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
     _pf.SALLOC(sym->type()->size());
   }
 
-  const auto program = til::create_symbol(cdk::functional_type::create(cdk::primitive_type::create(4, cdk::TYPE_INT)), "_main", 0, tPRIVATE);
+  const auto program = til::make_symbol(cdk::functional_type::create(cdk::primitive_type::create(4, cdk::TYPE_INT)), "_main", 0, tPRIVATE);
   _symtab.insert(program->name(), program);
   _functions.push_back(program);
   _functionLabels.push_back("_main");
@@ -484,14 +484,12 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
 
   // we may still need to initialize the variable
   if (node->init()) {
-    
     if (_inFunctionBody)
       processLocalVarInit(symbol, node->init(), lvl);
     else
       processGlobalVarInit(symbol, node->init(), lvl);
     _symbolsToDeclare.erase(symbol->name());
   } else if (!_inFunctionArgs && !_inFunctionBody) {
-    printf("INSERT %s\n", symbol->name().c_str());
     _symbolsToDeclare.insert(symbol->name());
   }
 }
@@ -574,7 +572,60 @@ void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl
     _pf.SINT(0);
 }
 
-void til::postfix_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
+void til::postfix_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {
+  _symtab.push(); // args scope
+  auto function = til::make_symbol(node->type(), "@", 0, tPRIVATE);
+  if (_symtab.find_local(function->name())) {
+    _symtab.replace(function->name(), function);
+  } else {
+    _symtab.insert(function->name(), function);
+  }
+  _functions.push_back(function);
+
+  const auto functionLabel = mklbl(++_lbl);
+  _functionLabels.push_back(functionLabel);
+
+  const auto previous_offset = _offset;
+  _offset = 8; // prepare for arguments (4: remember to account for return address)
+
+  if (node->arguments()) {
+    _inFunctionArgs = true;
+    for (size_t ix = 0; ix < node->arguments()->size(); ix++) {
+      node->arguments()->node(ix)->accept(this, lvl);
+    }
+    _inFunctionArgs = false;
+  }
+
+  _pf.TEXT(functionLabel);
+  _pf.ALIGN();
+  _pf.LABEL(functionLabel);
+
+  // compute stack size to be reserved for local variables
+  frame_size_calculator fsc(_compiler, _symtab);
+  node->accept(&fsc, lvl);
+  _pf.ENTER(fsc.localsize());
+
+  _offset = 0; // reset offset, prepare for local variables
+  auto _previouslyInFunctionBody = _inFunctionBody;
+  _inFunctionBody = true;
+  if (node->block())
+    node->block()->accept(this, lvl + 2);
+  _inFunctionBody = _previouslyInFunctionBody;
+  _symtab.pop(); // leaving args scope
+  _offset = previous_offset;
+
+  if (function)
+    _functions.pop_back();
+
+  _pf.LEAVE();
+  _pf.RET();
+
+  if (_inFunctionBody) {
+    _functionLabels.pop_back();
+    _pf.TEXT(_functionLabels.back());
+    _pf.ADDR(functionLabel);
+  }  
+}
 
 void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
   _symtab.push();
@@ -585,9 +636,84 @@ void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
   _symtab.pop();
 }
 
-void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {}
+void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
 
-void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {}
+  std::vector<std::shared_ptr<cdk::basic_type>> argsTypes;
+  const auto func = node->function();
+  
+  if (func) {
+    argsTypes = cdk::functional_type::cast(func->type())->input()->components();
+  } else {
+    auto deepestRecursiveFunc = _functions.back();
+    argsTypes = cdk::functional_type::cast(deepestRecursiveFunc->type())->input()->components();
+  }
+
+  size_t argsSize = 0; // bytes (size of all the arguments)
+
+  if (node->arguments()) {
+    for (int i = node->arguments()->size() - 1; i >= 0; i--) {
+      auto arg = dynamic_cast<cdk::expression_node *>(node->arguments()->node(i));
+      arg->accept(this, lvl + 2);
+
+      if (argsTypes[i]->name() == cdk::TYPE_DOUBLE && arg->type()->name() == cdk::TYPE_INT) {
+        argsSize += 4;
+        _pf.I2D();
+      }
+      argsSize += arg->type()->size();
+    }
+  }
+
+  if (func) {
+    // non-recursive functions
+    _currentForwardLabel.clear();
+    // if it is a forward function, the label will be set again
+    func->accept(this, lvl + 2);
+    
+    if(_currentForwardLabel.empty()) // regular non-recursive function call
+      _pf.BRANCH();
+    else //forwarded function call
+      _pf.CALL(_currentForwardLabel);
+  } else { // recursive function call
+      _pf.CALL(_functionLabels.back());
+  }
+
+  if (argsSize > 0)
+    _pf.TRASH(argsSize);
+
+  switch (node->type()->name()) {
+    case cdk::TYPE_VOID:
+      break;
+    case cdk::TYPE_INT:
+      if (_currentForwardLabel.empty()) {
+        _pf.LDFVAL64();
+        _pf.D2I();
+      } else {
+        _pf.LDFVAL32();
+      }
+      break;
+    case cdk::TYPE_STRING:
+    case cdk::TYPE_POINTER:
+    case cdk::TYPE_FUNCTIONAL:
+      _pf.LDFVAL32();
+      break;
+    case cdk::TYPE_DOUBLE:
+      _pf.LDFVAL64();
+      break;
+    default:
+      error(node->lineno(), "Unable to call expression of unknown type");
+  }
+  _currentForwardLabel.clear();
+}
+
+void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  node->argument()->accept(this, lvl);
+  _pf.INT(cdk::reference_type::cast(node->type())->referenced()->size()); // type size
+  _pf.MUL(); // type size * argument
+  _pf.ALLOC();           
+  _pf.SP();
+}
 
 void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {
   const auto loopLabels = _loopCond.size();
@@ -629,16 +755,48 @@ void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
 
-  
+  const auto current_function_type_name = cdk::functional_type::cast(_functions.back()->type())->output(0)->name();
+
+  if (current_function_type_name != cdk::TYPE_VOID){
+    node->retval()->accept(this, lvl + 2);
+
+    switch (current_function_type_name) {
+      case cdk::TYPE_INT:
+        if (_functions.back()->is_main()) {
+          _mainReturnSeen = true;
+          _pf.STFVAL32();
+        } else {
+          _pf.I2D();
+          _pf.STFVAL64();
+        }
+        break;
+      case cdk::TYPE_STRING:
+      case cdk::TYPE_POINTER:
+      case cdk::TYPE_FUNCTIONAL:
+        _pf.STFVAL32(); 
+        break;
+      case cdk::TYPE_DOUBLE:
+        if (!node->retval()->is_typed(cdk::TYPE_DOUBLE))
+          _pf.I2D();    
+        _pf.STFVAL64(); 
+        break;
+      default:
+        error(node->lineno(), "invalid return type");
+    }
+  }
+
+  _lastBlockInstructionSeen = true;
+  _pf.LEAVE();
+  _pf.RET();
 }
 
 void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
-  // ASSERT_SAFE_EXPRESSIONS;
-  // node->base()->accept(this, lvl);
-  // node->index()->accept(this, lvl);
-  // _pf.INT(node->type()->size());
-  // _pf.MUL();
-  // _pf.ADD();
+  ASSERT_SAFE_EXPRESSIONS;
+  node->base()->accept(this, lvl);
+  node->index()->accept(this, lvl);
+  _pf.INT(node->type()->size());
+  _pf.MUL();
+  _pf.ADD();
 }
 
 void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {

@@ -47,13 +47,16 @@ namespace til {
     }
     bool is_global() const { 
       return _offset == 0; 
-      }
+    }
+    bool is_main() const { 
+      return name() == "_main"; 
+    }
     int qualifier() const {
       return _qualifier; 
     }
   };
 
-  inline auto create_symbol(std::shared_ptr<cdk::basic_type> type,
+  inline auto make_symbol(std::shared_ptr<cdk::basic_type> type,
                         const std::string &name, long value, int qualifier) {
   return std::make_shared<symbol>(type, name, value, qualifier);
 }
