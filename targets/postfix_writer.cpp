@@ -16,11 +16,6 @@ void til::postfix_writer::do_data_node(cdk::data_node * const node, int lvl) {
 }
 //---------------------------------------------------------------------------
 
-
-
-void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
-  
-}
 void til::postfix_writer::do_not_node(cdk::not_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->argument()->accept(this, lvl + 2);
@@ -40,7 +35,15 @@ void til::postfix_writer::do_and_node(cdk::and_node * const node, int lvl) {
 
 }
 void til::postfix_writer::do_or_node(cdk::or_node * const node, int lvl) {
-  
+  ASSERT_SAFE_EXPRESSIONS;
+  const auto lbl = mklbl(++_lbl);
+  node->left()->accept(this, lvl + 2);
+  _pf.DUP32();
+  _pf.JNZ(lbl);
+  node->right()->accept(this, lvl + 2);
+  _pf.OR();
+  _pf.ALIGN();
+  _pf.LABEL(lbl);
 }
 
 //---------------------------------------------------------------------------
@@ -55,27 +58,37 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  if (_inFunctionBody) {
+  if (_inFunctionBody) 
     _pf.INT(node->value()); // stored during function scope
-  }
-  else {
+  else 
     _pf.SINT(node->value()); // stored globally
-  }
+  
+}
+
+void til::postfix_writer::do_double_node(cdk::double_node * const node, int lvl) {
+  if (_inFunctionBody)
+    _pf.DOUBLE(node->value());
+  else 
+    _pf.SDOUBLE(node->value());
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1;
+  const auto lbl = mklbl(++_lbl);
 
   /* generate the string */
   _pf.RODATA(); // strings are DATA readonly
   _pf.ALIGN(); // make sure we are aligned
-  _pf.LABEL(mklbl(lbl1 = ++_lbl)); // give the string a name
+  _pf.LABEL(lbl); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
-
-  /* leave the address on the stack */
-  _pf.TEXT(); // return to the TEXT segment
-  _pf.ADDR(mklbl(lbl1)); // the string to be printed
+  if (_inFunctionBody) {
+    _pf.TEXT(); // return to the TEXT segment
+    _pf.ADDR(lbl); // the string to be printed
+  }
+  else {
+    _pf.DATA();
+    _pf.SADDR(lbl);
+  }
 }
 
 //---------------------------------------------------------------------------
@@ -202,18 +215,30 @@ void til::postfix_writer::do_eq_node(cdk::eq_node * const node, int lvl) {
 
 void til::postfix_writer::do_variable_node(cdk::variable_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  // simplified generation: all variables are global
-  _pf.ADDR(node->name());
+  const auto &id = node->name();
+  const auto sym = _symtab.find(id);
+
+  if (sym->qualifier() == tEXTERNAL)
+    _currentForwardLabel = sym->name();
+  else if (sym->is_global())
+    _pf.ADDR(sym->name());
+  else
+    _pf.LOCAL(sym->offset());
 }
 
 void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->lvalue()->accept(this, lvl);
-  _pf.LDINT(); 
+  if (node->is_typed(cdk::TYPE_DOUBLE)) {
+    _pf.LDDOUBLE();
+  }
+  else {
+    if(_currentForwardLabel.empty())
+      _pf.LDINT(); 
+  }
 }
 
 void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
-  printf("A\n");
   ASSERT_SAFE_EXPRESSIONS;
   node->rvalue()->accept(this, lvl);
   if(node->is_typed(cdk::TYPE_DOUBLE)) {
@@ -407,9 +432,7 @@ void til::postfix_writer::processLocalVariableInitialization(
   }
 }
 
-void til::postfix_writer::processGlobalVariableInitialization(
-    std::shared_ptr<til::symbol> symbol,
-    cdk::expression_node *const initializer, int lvl) {
+void til::postfix_writer::processGlobalVariableInitialization(std::shared_ptr<til::symbol> symbol, cdk::expression_node *const initializer, int lvl) {
   switch (symbol->type()->name()) {
     case cdk::TYPE_INT:
     case cdk::TYPE_STRING:

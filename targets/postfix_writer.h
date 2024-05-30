@@ -27,6 +27,7 @@ namespace til {
     bool _lastBlockInstructionSeen = false;
 
     std::vector<std::string> _functionLabels;
+    std::string _currentForwardLabel;
     std::vector<std::shared_ptr<til::symbol>> _functions;
 
     int _offset = 0;    // current frame pointer offset -- 0 means no vars define
@@ -42,17 +43,16 @@ namespace til {
       os().flush();
     }
 
-  private:
+  protected:
     void processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl);
-
     void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
-
     void processLocalVariableInitialization(std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl);
 
     void processGlobalVariableInitialization(std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl);
-    
+
+  private:
     /** Method used to generate sequential labels. */
     inline std::string mklbl(int lbl) {
       std::ostringstream oss;

@@ -45,6 +45,9 @@ namespace til {
     int offset() const { 
       return _offset; 
     }
+    bool is_global() const { 
+      return _offset == 0; 
+      }
     int qualifier() const {
       return _qualifier; 
     }
