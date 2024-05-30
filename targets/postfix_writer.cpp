@@ -132,9 +132,9 @@ void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   processTypeMultiplicative(node, lvl);
   if (node->is_typed(cdk::TYPE_DOUBLE)) {
-    _pf.DMUL();
+    _pf.DDIV();
   } else {
-    _pf.MUL();
+    _pf.DIV();
   }
 }
 void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) { 
