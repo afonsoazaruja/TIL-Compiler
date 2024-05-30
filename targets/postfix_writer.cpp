@@ -138,8 +138,6 @@ void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
   }
 }
 void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) { 
-  // only works with integers
-  // TODO: verificar
   ASSERT_SAFE_EXPRESSIONS;
   node->left()->accept(this, lvl + 2);
   node->right()->accept(this, lvl + 2);
@@ -211,25 +209,27 @@ void til::postfix_writer::do_variable_node(cdk::variable_node * const node, int 
 void til::postfix_writer::do_rvalue_node(cdk::rvalue_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->lvalue()->accept(this, lvl);
-  _pf.LDINT(); // depends on type size
+  _pf.LDINT(); 
 }
 
 void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, int lvl) {
+  printf("A\n");
   ASSERT_SAFE_EXPRESSIONS;
-  node->rvalue()->accept(this, lvl); // determine the new value
-  _pf.DUP32();
-  if (new_symbol() == nullptr) {
-    node->lvalue()->accept(this, lvl); // where to store the value
-  } else {
-    _pf.DATA(); // variables are all global and live in DATA
-    _pf.ALIGN(); // make sure we are aligned
-    _pf.LABEL(new_symbol()->name()); // name variable location
-    reset_new_symbol();
-    _pf.SINT(0); // initialize it to 0 (zero)
-    _pf.TEXT(); // return to the TEXT segment
-    node->lvalue()->accept(this, lvl);  //DAVID: bah!
+  node->rvalue()->accept(this, lvl);
+  if(node->is_typed(cdk::TYPE_DOUBLE)) {
+    if(node->rvalue()->is_typed(cdk::TYPE_INT))
+      _pf.I2D();
+    _pf.DUP64();
   }
-  _pf.STINT(); // store the value at address
+  else {
+    _pf.DUP32();
+  }
+
+  node->lvalue()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE))
+    _pf.STDOUBLE();
+  else
+    _pf.STINT();
 }
 
 //----------------------------------TIL--------------------------------------
@@ -351,115 +351,117 @@ void til::postfix_writer::do_if_else_node(til::if_else_node * const node, int lv
 //----------------------------------NEW--------------------------------------
 
 void til::postfix_writer::do_declaration_node(til::declaration_node *const node, int lvl) {
-  // ASSERT_SAFE_EXPRESSIONS;
-  // const auto id = node->identifier();
-  // const auto type_size = node->type()->size();
-  // int offset = 0;
+  ASSERT_SAFE_EXPRESSIONS;
+  const auto id = node->identifier();
+  const auto type_size = node->type()->size();
+  int offset = 0;
 
-  // if (_inFunctionArgs) {
-  //   offset = _offset;
-  //   _offset += type_size;
-  // } else if (_inFunctionBody) {
-  //   _offset -= type_size;
-  //   offset = _offset;
-  // }
+  if (_inFunctionArgs) {
+    offset = _offset;
+    _offset += type_size;
+  } else if (_inFunctionBody) {
+    _offset -= type_size;
+    offset = _offset;
+  }
 
-  // const auto symbol = new_symbol();
-  // if (symbol) {
-  //   symbol->set_offset(offset);
-  //   reset_new_symbol();
-  // }
+  const auto symbol = new_symbol();
+  if (symbol) {
+    symbol->set_offset(offset);
+    reset_new_symbol();
+  }
 
-  // // we may still need to initialize the variable
-  // if (node->init()) {
-  //   if (_inFunctionBody)
-  //     processLocalVariableInitialization(symbol, node->init(), lvl);
-  //   else
-  //     processGlobalVariableInitialization(symbol, node->init(), lvl);
-  //   _symbolsToDeclare.erase(symbol->name());
-  // } else if (!_inFunctionArgs && !_inFunctionBody)
-  //   _symbolsToDeclare.insert(symbol->name());
+  // we may still need to initialize the variable
+  if (node->init()) {
+    
+    if (_inFunctionBody)
+      processLocalVariableInitialization(symbol, node->init(), lvl);
+    else
+      processGlobalVariableInitialization(symbol, node->init(), lvl);
+    _symbolsToDeclare.erase(symbol->name());
+  } else if (!_inFunctionArgs && !_inFunctionBody) {
+    _symbolsToDeclare.insert(symbol->name());
+  }
 }
 
 void til::postfix_writer::processLocalVariableInitialization(
     std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl) {
-  // initializer->accept(this, lvl);
-  // switch (symbol->type()->name()) {
-  // case cdk::TYPE_INT:
-  // case cdk::TYPE_STRING:
-  // case cdk::TYPE_POINTER:
-  // case cdk::TYPE_FUNCTIONAL:
-  // case cdk::TYPE_UNSPEC: // cases such as `auto x = input;`
-  //   _pf.LOCAL(symbol->offset());
-  //   _pf.STINT();
-  //   break;
-  // case cdk::TYPE_DOUBLE:
-  //   if (initializer->is_typed(cdk::TYPE_INT))
-  //     _pf.I2D();
-  //   _pf.LOCAL(symbol->offset());
-  //   _pf.STDOUBLE();
-  //   break;
-  // default:
-  //   error(initializer->lineno(), "invalid type for variable initialization");
-  // }
+  initializer->accept(this, lvl);
+  switch (symbol->type()->name()) {
+  case cdk::TYPE_INT:
+  case cdk::TYPE_STRING:
+  case cdk::TYPE_POINTER:
+  case cdk::TYPE_FUNCTIONAL:
+  case cdk::TYPE_UNSPEC: // cases such as `auto x = input;`
+    _pf.LOCAL(symbol->offset());
+    _pf.STINT();
+    break;
+  case cdk::TYPE_DOUBLE:
+    if (initializer->is_typed(cdk::TYPE_INT))
+      _pf.I2D();
+    _pf.LOCAL(symbol->offset());
+    _pf.STDOUBLE();
+    break;
+  default:
+    error(initializer->lineno(), "invalid type for variable initialization");
+  }
 }
 
 void til::postfix_writer::processGlobalVariableInitialization(
     std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl) {
-  // switch (symbol->type()->name()) {
-  //   case cdk::TYPE_INT:
-  //   case cdk::TYPE_STRING:
-  //   case cdk::TYPE_POINTER:
-  //     _pf.DATA(); // Data segment, for global variables
-  //     _pf.ALIGN();
-  //     _pf.LABEL(symbol->name());
-  //     initializer->accept(this, lvl + 2);
-  //     break;
-  //   case cdk::TYPE_DOUBLE:
-  //     _pf.DATA(); // Data segment, for global variables
-  //     _pf.ALIGN();
-  //     _pf.LABEL(symbol->name());
+  switch (symbol->type()->name()) {
+    case cdk::TYPE_INT:
+    case cdk::TYPE_STRING:
+    case cdk::TYPE_POINTER:
+      _pf.DATA();
+      _pf.ALIGN();
+      _pf.LABEL(symbol->name());
+      initializer->accept(this, lvl + 2);
+      break;
+    case cdk::TYPE_DOUBLE:
+      _pf.DATA(); 
+      _pf.ALIGN();
+      _pf.LABEL(symbol->name());
 
-  //     // the following initializations need to be done outside of the switch
-  //     const cdk::integer_node *dclini;
-  //     cdk::double_node *ddi;
-  //     switch (initializer->type()->name()) {
-  //       case cdk::TYPE_INT:
-  //         // here, we actually want to initialize the variable with a double
-  //         // thus, we need to convert the expression to a double node
-  //         // NOTE: I don't like these variable names either, taken from DM
-  //         dclini = dynamic_cast<const cdk::integer_node *>(initializer);
-  //         ddi = new cdk::double_node(dclini->lineno(), dclini->value());
-  //         ddi->accept(this, lvl + 2);
-  //         break;
-  //       case cdk::TYPE_DOUBLE:
-  //         initializer->accept(this, lvl + 2);
-  //         break;
-  //       default:
-  //         error(initializer->lineno(),
-  //               "invalid type for double variable initialization");
-  //     }
-  //     break;
-  //   case cdk::TYPE_FUNCTIONAL:
-  //     _functions.push_back(symbol);
-  //     initializer->accept(this, lvl);
-  //     _pf.DATA(); // Data segment, for global variables
-  //     _pf.ALIGN();
-  //     if (symbol->qualifier() == tPUBLIC)
-  //       _pf.GLOBAL(symbol->name(), _pf.OBJ());
-  //     _pf.LABEL(symbol->name());
-  //     _pf.SADDR(_functionLabels.back());
-  //     break;
-  //   default:
-  //     error(initializer->lineno(), "invalid type for variable initialization");
-  // }
+      const cdk::integer_node *declareI;
+      cdk::double_node *declareDI;
+      switch (initializer->type()->name()) {
+        case cdk::TYPE_INT:
+          declareI = dynamic_cast<const cdk::integer_node *>(initializer);
+          declareDI = new cdk::double_node(declareI->lineno(), declareI->value());
+          declareDI->accept(this, lvl + 2);
+          break;
+        case cdk::TYPE_DOUBLE:
+          initializer->accept(this, lvl + 2);
+          break;
+        default:
+          error(initializer->lineno(),
+                "invalid type for double variable initialization");
+      }
+      break;
+    case cdk::TYPE_FUNCTIONAL:
+      _functions.push_back(symbol);
+      initializer->accept(this, lvl);
+      _pf.DATA();
+      _pf.ALIGN();
+      if (symbol->qualifier() == tPUBLIC)
+        _pf.GLOBAL(symbol->name(), _pf.OBJ());
+      _pf.LABEL(symbol->name());
+      _pf.SADDR(_functionLabels.back());
+      break;
+    default:
+      error(initializer->lineno(), "invalid type for variable initialization");
+  }
 }
 
-
-
-void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {}
+void til::postfix_writer::do_nullptr_node(til::nullptr_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  if(_inFunctionBody)
+    _pf.INT(0);
+  else
+    _pf.SINT(0);
+}
 
 void til::postfix_writer::do_function_definition_node(til::function_definition_node *const node, int lvl) {}
 
@@ -489,6 +491,12 @@ void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) 
 
 void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {}
 
-void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {}
+void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
+  if (_inFunctionBody)
+    _pf.INT(node->argument()->type()->size());
+  else
+    _pf.SINT(node->argument()->type()->size());
+}
 
 

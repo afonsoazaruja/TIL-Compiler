@@ -2,6 +2,7 @@
 #define __TIL_TARGETS_TYPE_CHECKER_H__
 
 #include "targets/basic_ast_visitor.h"
+#include ".auto/all_nodes.h"
 
 namespace til {
 
@@ -30,9 +31,14 @@ namespace til {
     void processTypeIntegerExpression(cdk::binary_operation_node *const node, int lvl);
     void processCompareExpression(cdk::binary_operation_node *const node, int lvl);
     void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
-    bool checkPointerCompatibleTypes(std::shared_ptr<cdk::basic_type> ptr1, std::shared_ptr<cdk::basic_type> ptr2);
     void processEqualityExpression(cdk::binary_operation_node *const node, int lvl);
     void processAdditiveExpression(cdk::binary_operation_node *const node, int lvl, bool sub);
+    
+    bool checkCompatiblePtrTypes(std::shared_ptr<cdk::basic_type> ptr1, std::shared_ptr<cdk::basic_type> ptr2);
+    bool checkCompatibleDataTypes(std::shared_ptr<cdk::basic_type> t1, std::shared_ptr<cdk::basic_type> t2, bool is_return = false);
+    bool checkCompatibleFunTypes(std::shared_ptr<cdk::functional_type> t1, std::shared_ptr<cdk::functional_type> t2);
+    void changeTypeOnMatch(cdk::typed_node *const lvalue, cdk::typed_node *const rvalue);
+    void throwIncompatibleTypes(std::shared_ptr<cdk::basic_type> t1, std::shared_ptr<cdk::basic_type> t2, bool is_return = false);
     template<typename T>
     void process_literal(cdk::literal_node<T> *const node, int lvl) {
     }
