@@ -500,7 +500,7 @@ void til::type_checker::do_return_node(til::return_node *const node, int lvl) {
 void til::type_checker::do_index_node(til::index_node *const node, int lvl) {
   ASSERT_UNSPEC;
   node->base()->accept(this, lvl + 2);
-  if (node->base()->is_typed(cdk::TYPE_POINTER))
+  if (!node->base()->is_typed(cdk::TYPE_POINTER))
     throw std::string("wrong type: base of index");
   node->index()->accept(this, lvl + 2);
   if (!node->index()->is_typed(cdk::TYPE_INT))
