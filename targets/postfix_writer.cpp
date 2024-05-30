@@ -54,6 +54,7 @@ void til::postfix_writer::do_sequence_node(cdk::sequence_node * const node, int 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
   if (_inFunctionBody) {
     _pf.INT(node->value()); // stored during function scope
   }
@@ -63,6 +64,7 @@ void til::postfix_writer::do_integer_node(cdk::integer_node * const node, int lv
 }
 
 void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
   int lbl1;
 
   /* generate the string */
@@ -236,7 +238,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   // a function node. However, it must start in the main function.
   // The ProgramNode (representing the whole program) doubles as a
   // main function node.
-
+  _inFunctionBody = true;
   // generate the main function (RTS mandates that its name be "_main")
   _pf.BSS();
   _pf.TEXT();
