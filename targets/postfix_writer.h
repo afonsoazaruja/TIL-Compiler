@@ -28,7 +28,7 @@ namespace til {
     bool _lastBlockInstructionSeen = false;
 
     // while labels -- for break/continue; work like stacks
-    std::vector<int> _whileCond, _whileEnd;
+    std::vector<int> _loopCond, _loopEnd;
 
     std::vector<std::string> _functionLabels;
     std::string _currentForwardLabel;

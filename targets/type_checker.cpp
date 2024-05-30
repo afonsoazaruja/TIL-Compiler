@@ -21,7 +21,7 @@ void til::type_checker::do_data_node(cdk::data_node *const node, int lvl) {
   // EMPTY
 }
 void til::type_checker::do_stop_node(til::stop_node *const node, int lvl) {
-  // EMPTY
+  
 }
 void til::type_checker::do_next_node(til::next_node *const node, int lvl) {
   // EMPTY

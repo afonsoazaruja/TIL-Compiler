@@ -416,8 +416,8 @@ void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   int whileCondLbl = ++_lbl;
   int whileEndLbl = ++_lbl;
   
-  _whileCond.push_back(whileCondLbl);
-  _whileEnd.push_back(whileEndLbl);
+  _loopCond.push_back(whileCondLbl);
+  _loopEnd.push_back(whileEndLbl);
 
   _symtab.push();   
 
@@ -433,8 +433,8 @@ void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   _pf.LABEL(mklbl(whileEndLbl));
 
   _symtab.pop();         
-  _whileCond.pop_back(); 
-  _whileEnd.pop_back();
+  _loopCond.pop_back(); 
+  _loopEnd.pop_back();
 }
 
 //---------------------------------------------------------------------------
@@ -589,18 +589,57 @@ void til::postfix_writer::do_function_call_node(til::function_call_node *const n
 
 void til::postfix_writer::do_stack_alloc_node(til::stack_alloc_node *const node, int lvl) {}
 
-void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {}
+void til::postfix_writer::do_stop_node(til::stop_node *const node, int lvl) {
+  const auto loopLabels = _loopCond.size();
+  if (loopLabels == 0) {
+    error(node->lineno(), "stop node found outside a while block");
+    return;
+  }
+  const size_t stopLvl = (size_t)node->level();
+  if(stopLvl > loopLabels || stopLvl < 1) {
+    error(node->lineno(), "invalid stop level");
+    return;
+  }
+  _lastBlockInstructionSeen = true;
+  const auto loopEndLbl = _loopEnd[loopLabels - stopLvl];
+  _pf.JMP(mklbl(loopEndLbl));
+}
 
 void til::postfix_writer::do_address_of_node(til::address_of_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->lvalue()->accept(this, lvl + 2);
 }
 
-void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {}
+void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {
+  const auto loopLabels = _loopCond.size();
+    if (loopLabels == 0) {
+      error(node->lineno(), "next node found outside a while block");
+      return;
+    }
+    const size_t nextLvl = (size_t)node->level();
+    if(nextLvl > loopLabels || nextLvl < 1) {
+      error(node->lineno(), "invalid next level");
+      return;
+    }
+    _lastBlockInstructionSeen = true;
+    const auto loopCondLbl = _loopCond[loopLabels - nextLvl];
+    _pf.JMP(mklbl(loopCondLbl));
+}
 
-void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {}
+void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
+  ASSERT_SAFE_EXPRESSIONS;
 
-void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {}
+  
+}
+
+void til::postfix_writer::do_index_node(til::index_node *const node, int lvl) {
+  // ASSERT_SAFE_EXPRESSIONS;
+  // node->base()->accept(this, lvl);
+  // node->index()->accept(this, lvl);
+  // _pf.INT(node->type()->size());
+  // _pf.MUL();
+  // _pf.ADD();
+}
 
 void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
@@ -609,5 +648,3 @@ void til::postfix_writer::do_sizeof_node(til::sizeof_node *const node, int lvl) 
   else
     _pf.SINT(node->argument()->type()->size());
 }
-
-
