@@ -141,6 +141,8 @@ void til::postfix_writer::do_mod_node(cdk::mod_node * const node, int lvl) {
   // only works with integers
   // TODO: verificar
   ASSERT_SAFE_EXPRESSIONS;
+  node->left()->accept(this, lvl + 2);
+  node->right()->accept(this, lvl + 2);
   if (node->is_typed(cdk::TYPE_DOUBLE)) {
     error(node->lineno(), "integer expression expected");
   }
