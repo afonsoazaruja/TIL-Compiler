@@ -27,6 +27,9 @@ namespace til {
     bool _mainReturnSeen = false;
     bool _lastBlockInstructionSeen = false;
 
+    // while labels -- for break/continue; work like stacks
+    std::vector<int> _whileCond, _whileEnd;
+
     std::vector<std::string> _functionLabels;
     std::string _currentForwardLabel;
     std::vector<std::shared_ptr<til::symbol>> _functions;
@@ -45,7 +48,8 @@ namespace til {
     }
 
   protected:
-    void processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl);
+    void processAdditiveExpression(cdk::binary_operation_node *const node, int lvl);
+    void processMultiplicativeExpression(cdk::binary_operation_node *const node, int lvl);
     void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
     void processLocalVarInit(std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl);

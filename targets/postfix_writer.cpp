@@ -1,5 +1,6 @@
 #include <string>
 #include <sstream>
+#include "targets/frame_size_calculator.h"
 #include "targets/type_checker.h"
 #include "targets/postfix_writer.h"
 #include ".auto/all_nodes.h"  // all_nodes.h is automatically generated
@@ -106,20 +107,52 @@ void til::postfix_writer::do_unary_plus_node(cdk::unary_plus_node * const node, 
 
 //---------------------------------------------------------------------------
 
-void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
+void til::postfix_writer::processAdditiveExpression(cdk::binary_operation_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.ADD();
-}
-void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
-  ASSERT_SAFE_EXPRESSIONS;
-  node->left()->accept(this, lvl);
-  node->right()->accept(this, lvl);
-  _pf.SUB();
+  node->left()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) && !node->left()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+  else if (node->is_typed(cdk::TYPE_POINTER) && !node->left()->is_typed(cdk::TYPE_POINTER)) {
+    const auto ref_right = cdk::reference_type::cast(node->right()->type())->referenced();
+    _pf.INT(std::max(1, static_cast<int>(ref_right->size())));  // for ptr
+    _pf.MUL();
+  }
+
+  node->right()->accept(this, lvl + 2);
+  if (node->is_typed(cdk::TYPE_DOUBLE) && !node->right()->is_typed(cdk::TYPE_DOUBLE))
+    _pf.I2D();
+  else if (node->is_typed(cdk::TYPE_POINTER) && !node->right()->is_typed(cdk::TYPE_POINTER)) {
+    const auto ref_left = cdk::reference_type::cast(node->left()->type())->referenced();
+    _pf.INT(std::max(1, static_cast<int>(ref_left->size()))); // for ptr
+    _pf.MUL();
+  }
 }
 
-void til::postfix_writer::processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl) {
+void til::postfix_writer::do_add_node(cdk::add_node * const node, int lvl) {
+  processAdditiveExpression(node, lvl);
+
+  if (node->is_typed(cdk::TYPE_DOUBLE))
+    _pf.DADD();
+  else
+    _pf.ADD();
+  }
+  
+void til::postfix_writer::do_sub_node(cdk::sub_node * const node, int lvl) {
+  processAdditiveExpression(node, lvl);
+
+  if(node->is_typed(cdk::TYPE_DOUBLE)) { 
+    _pf.DSUB();
+  } else {
+    _pf.SUB();
+    if(node->left()->is_typed(cdk::TYPE_POINTER) && node->right()->is_typed(cdk::TYPE_POINTER) 
+      && cdk::reference_type::cast(node->left()->type())->referenced()->name() != cdk::TYPE_VOID){
+      _pf.INT(cdk::reference_type::cast(node->left()->type())->referenced()->size());
+      _pf.DIV();
+    }
+  }
+}
+
+void til::postfix_writer::processMultiplicativeExpression(cdk::binary_operation_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
   node->left()->accept(this, lvl + 2);
   if (node->is_typed(cdk::TYPE_DOUBLE) &&
@@ -134,7 +167,7 @@ void til::postfix_writer::processTypeMultiplicative(cdk::binary_operation_node *
 
 void til::postfix_writer::do_mul_node(cdk::mul_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  processTypeMultiplicative(node, lvl);
+  processMultiplicativeExpression(node, lvl);
   if (node->is_typed(cdk::TYPE_DOUBLE)) {
     _pf.DMUL();
   } else {
@@ -143,7 +176,7 @@ void til::postfix_writer::do_mul_node(cdk::mul_node * const node, int lvl) {
 }
 void til::postfix_writer::do_div_node(cdk::div_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  processTypeMultiplicative(node, lvl);
+  processMultiplicativeExpression(node, lvl);
   if (node->is_typed(cdk::TYPE_DOUBLE)) {
     _pf.DDIV();
   } else {
@@ -261,13 +294,7 @@ void til::postfix_writer::do_assignment_node(cdk::assignment_node * const node, 
 
 void til::postfix_writer::do_program_node(til::program_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  // Note that Simple doesn't have functions. Thus, it doesn't need
-  // a function node. However, it must start in the main function.
-  // The ProgramNode (representing the whole program) doubles as a
-  // main function node.
-  _inFunctionBody = true;
-
-  for (auto symName : _symbolsToDeclare){
+  for (auto symName : _symbolsToDeclare) {
     const auto sym = _symtab.find(symName);
     if(sym->qualifier() == tEXTERNAL){ // it's a function
       _functionsToDeclare.insert(symName);
@@ -281,29 +308,42 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
     _pf.SALLOC(sym->type()->size());
   }
 
+  const auto program = til::create_symbol(cdk::functional_type::create(cdk::primitive_type::create(4, cdk::TYPE_INT)), "_main", 0, tPRIVATE);
+  _symtab.insert(program->name(), program);
+  _functions.push_back(program);
+  _functionLabels.push_back("_main");
 
   // generate the main function (RTS mandates that its name be "_main")
-  _pf.BSS();
-  _pf.TEXT();
+  _symtab.push();
+  _pf.TEXT("_main");
   _pf.ALIGN();
   _pf.GLOBAL("_main", _pf.FUNC());
   _pf.LABEL("_main");
-  _pf.ENTER(0);  // Simple doesn't implement local variables
 
+  frame_size_calculator fsc(_compiler, _symtab);
+  node->accept(&fsc, lvl);
+  _pf.ENTER(fsc.localsize()); // allocate space for local variables
+
+  _inFunctionBody = true;
   node->block()->accept(this, lvl + 2); // this will also generate the code to execute the block
+  _inFunctionBody = false;
+
+  _symtab.pop();
+
+  _functionLabels.pop_back();
+  _functions.pop_back();
+
+  if(!_mainReturnSeen){
+    _pf.INT(0);
+    _pf.STFVAL32();
+  }
 
   // end the main function
-  _pf.INT(0);
-  _pf.STFVAL32();
   _pf.LEAVE();
   _pf.RET();
   
-  // these are just a few library function imports<
-  _pf.EXTERN("readi");
-  _pf.EXTERN("printi");
-  _pf.EXTERN("printd");
-  _pf.EXTERN("prints");
-  _pf.EXTERN("println");
+  for(auto externFunction : _functionsToDeclare)
+    _pf.EXTERN(externFunction);
 }
 
 //---------------------------------------------------------------------------
@@ -328,18 +368,22 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
         dynamic_cast<cdk::expression_node *>(node->arguments()->node(ix));
     arg->accept(this, lvl); // determine the value to print
     if (arg->is_typed(cdk::TYPE_INT)) {
+      _functionsToDeclare.insert("printi");
       _pf.CALL("printi");
       _pf.TRASH(4);
     } else if (arg->is_typed(cdk::TYPE_DOUBLE)) {
+      _functionsToDeclare.insert("printd");
       _pf.CALL("printd");
       _pf.TRASH(8);
     } else if (arg->is_typed(cdk::TYPE_STRING)) {
+      _functionsToDeclare.insert("prints");
       _pf.CALL("prints");
       _pf.TRASH(4);
     } else
-      error(node->lineno(), "cannot print expression of unknown type");
+      error(node->lineno(), "print: unknown type");
   }
   if (node->newLine()) {
+    _functionsToDeclare.insert("println");
     _pf.CALL("println");
   }
 }
@@ -348,22 +392,49 @@ void til::postfix_writer::do_print_node(til::print_node * const node, int lvl) {
 
 void til::postfix_writer::do_read_node(til::read_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  _pf.CALL("readi");
-  _pf.LDFVAL32();
-  _pf.STINT();
+  switch (node->type()->name()) {
+    case cdk::TYPE_INT:
+    case cdk::TYPE_UNSPEC:
+      _functionsToDeclare.insert("readi");
+      _pf.CALL("readi");
+      _pf.LDFVAL32();
+      break;
+    case cdk::TYPE_DOUBLE:
+      _functionsToDeclare.insert("readd");
+      _pf.CALL("readd");
+      _pf.LDFVAL64();
+      break;
+    default:
+      error(node->lineno(), "read: unknown type");
+  }
 }
 
 //---------------------------------------------------------------------------
 
 void til::postfix_writer::do_loop_node(til::loop_node * const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-  int lbl1, lbl2;
-  _pf.LABEL(mklbl(lbl1 = ++_lbl));
-  node->condition()->accept(this, lvl);
-  _pf.JZ(mklbl(lbl2 = ++_lbl));
-  node->block()->accept(this, lvl + 2);
-  _pf.JMP(mklbl(lbl1));
-  _pf.LABEL(mklbl(lbl2));
+  int whileCondLbl = ++_lbl;
+  int whileEndLbl = ++_lbl;
+  
+  _whileCond.push_back(whileCondLbl);
+  _whileEnd.push_back(whileEndLbl);
+
+  _symtab.push();   
+
+  _pf.ALIGN();                               
+  _pf.LABEL(mklbl(whileCondLbl));            
+  node->condition()->accept(this, lvl + 2);  
+  _pf.JZ(mklbl(whileEndLbl));
+
+  node->block()->accept(this, lvl + 2); 
+  _lastBlockInstructionSeen = false;
+  _pf.JMP(mklbl(whileCondLbl));  
+  _pf.ALIGN();                   
+  _pf.LABEL(mklbl(whileEndLbl));
+
+  _symtab.pop();         
+  _whileCond.pop_back(); 
+  _whileEnd.pop_back();
 }
 
 //---------------------------------------------------------------------------
@@ -420,6 +491,7 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
       processGlobalVarInit(symbol, node->init(), lvl);
     _symbolsToDeclare.erase(symbol->name());
   } else if (!_inFunctionArgs && !_inFunctionBody) {
+    printf("INSERT %s\n", symbol->name().c_str());
     _symbolsToDeclare.insert(symbol->name());
   }
 }
