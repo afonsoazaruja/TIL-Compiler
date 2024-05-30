@@ -266,6 +266,22 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
   // The ProgramNode (representing the whole program) doubles as a
   // main function node.
   _inFunctionBody = true;
+
+  for (auto symName : _symbolsToDeclare){
+    const auto sym = _symtab.find(symName);
+    if(sym->qualifier() == tEXTERNAL){ // it's a function
+      _functionsToDeclare.insert(symName);
+      continue;
+    }
+
+    // declare the symbol
+    _pf.BSS();
+    _pf.ALIGN();
+    _pf.LABEL(symName);
+    _pf.SALLOC(sym->type()->size());
+  }
+
+
   // generate the main function (RTS mandates that its name be "_main")
   _pf.BSS();
   _pf.TEXT();
@@ -399,16 +415,16 @@ void til::postfix_writer::do_declaration_node(til::declaration_node *const node,
   if (node->init()) {
     
     if (_inFunctionBody)
-      processLocalVariableInitialization(symbol, node->init(), lvl);
+      processLocalVarInit(symbol, node->init(), lvl);
     else
-      processGlobalVariableInitialization(symbol, node->init(), lvl);
+      processGlobalVarInit(symbol, node->init(), lvl);
     _symbolsToDeclare.erase(symbol->name());
   } else if (!_inFunctionArgs && !_inFunctionBody) {
     _symbolsToDeclare.insert(symbol->name());
   }
 }
 
-void til::postfix_writer::processLocalVariableInitialization(
+void til::postfix_writer::processLocalVarInit(
     std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl) {
   initializer->accept(this, lvl);
@@ -432,7 +448,7 @@ void til::postfix_writer::processLocalVariableInitialization(
   }
 }
 
-void til::postfix_writer::processGlobalVariableInitialization(std::shared_ptr<til::symbol> symbol, cdk::expression_node *const initializer, int lvl) {
+void til::postfix_writer::processGlobalVarInit(std::shared_ptr<til::symbol> symbol, cdk::expression_node *const initializer, int lvl) {
   switch (symbol->type()->name()) {
     case cdk::TYPE_INT:
     case cdk::TYPE_STRING:

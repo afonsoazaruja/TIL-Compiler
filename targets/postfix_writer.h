@@ -17,6 +17,7 @@ namespace til {
     cdk::basic_postfix_emitter &_pf;
   
     std::set<std::string> _symbolsToDeclare;
+    std::set<std::string> _functionsToDeclare;
 
     int _lbl;
 
@@ -46,10 +47,10 @@ namespace til {
   protected:
     void processTypeMultiplicative(cdk::binary_operation_node *const node, int lvl);
     void processLogicalExpression(cdk::binary_operation_node *const node, int lvl);
-    void processLocalVariableInitialization(std::shared_ptr<til::symbol> symbol,
+    void processLocalVarInit(std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl);
 
-    void processGlobalVariableInitialization(std::shared_ptr<til::symbol> symbol,
+    void processGlobalVarInit(std::shared_ptr<til::symbol> symbol,
     cdk::expression_node *const initializer, int lvl);
 
   private:
