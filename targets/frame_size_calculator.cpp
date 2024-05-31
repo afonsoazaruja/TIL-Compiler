@@ -8,11 +8,9 @@ til::frame_size_calculator::~frame_size_calculator() { os().flush(); }
 void til::frame_size_calculator::do_unary_minus_node(cdk::unary_minus_node * const node, int lvl) {
   // EMPTY
 }
-
 void til::frame_size_calculator::do_unary_plus_node(cdk::unary_plus_node * const node, int lvl) {
   // EMPTY
 }
-
 void til::frame_size_calculator::do_add_node(cdk::add_node *const node, int lvl) {
   // EMPTY
 }
@@ -80,7 +78,6 @@ void til::frame_size_calculator::do_sub_node(cdk::sub_node *const node, int lvl)
   // EMPTY
 }
 //---------------------------------------TIL------------------------------------
-//--------------------------------------EMPTY-----------------------------------
 void til::frame_size_calculator::do_address_of_node(til::address_of_node *const node, int lvl) {
   // EMPTY
 }
@@ -90,7 +87,6 @@ void til::frame_size_calculator::do_evaluation_node(til::evaluation_node *const 
 void til::frame_size_calculator::do_function_call_node(til::function_call_node *const node, int lvl) {
   // EMPTY
 }
-
 void til::frame_size_calculator::do_index_node(til::index_node *const node, int lvl) {
   // EMPTY
 }
