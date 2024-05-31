@@ -83,7 +83,7 @@ void til::postfix_writer::do_string_node(cdk::string_node * const node, int lvl)
   _pf.LABEL(lbl); // give the string a name
   _pf.SSTRING(node->value()); // output string characters
   if (_inFunctionBody) {
-    _pf.TEXT(); // return to the TEXT segment
+    _pf.TEXT(_functionLabels.back()); // return to the TEXT segment
     _pf.ADDR(lbl); // the string to be printed
   }
   else {
@@ -582,11 +582,11 @@ void til::postfix_writer::do_function_definition_node(til::function_definition_n
   }
   _functions.push_back(function);
 
-  const auto functionLabel = mklbl(++_lbl);
-  _functionLabels.push_back(functionLabel);
+  const auto funcLabel = mklbl(++_lbl);
+  _functionLabels.push_back(funcLabel);
 
-  const auto previous_offset = _offset;
-  _offset = 8; // prepare for arguments (4: remember to account for return address)
+  const auto prev_offset = _offset;
+  _offset = 8;
 
   if (node->arguments()) {
     _inFunctionArgs = true;
@@ -596,11 +596,10 @@ void til::postfix_writer::do_function_definition_node(til::function_definition_n
     _inFunctionArgs = false;
   }
 
-  _pf.TEXT(functionLabel);
+  _pf.TEXT(funcLabel);
   _pf.ALIGN();
-  _pf.LABEL(functionLabel);
+  _pf.LABEL(funcLabel);
 
-  // compute stack size to be reserved for local variables
   frame_size_calculator fsc(_compiler, _symtab);
   node->accept(&fsc, lvl);
   _pf.ENTER(fsc.localsize());
@@ -612,7 +611,7 @@ void til::postfix_writer::do_function_definition_node(til::function_definition_n
     node->block()->accept(this, lvl + 2);
   _inFunctionBody = _previouslyInFunctionBody;
   _symtab.pop(); // leaving args scope
-  _offset = previous_offset;
+  _offset = prev_offset;
 
   if (function)
     _functions.pop_back();
@@ -623,7 +622,7 @@ void til::postfix_writer::do_function_definition_node(til::function_definition_n
   if (_inFunctionBody) {
     _functionLabels.pop_back();
     _pf.TEXT(_functionLabels.back());
-    _pf.ADDR(functionLabel);
+    _pf.ADDR(funcLabel);
   }  
 }
 
@@ -638,7 +637,6 @@ void til::postfix_writer::do_block_node(til::block_node *const node, int lvl) {
 
 void til::postfix_writer::do_function_call_node(til::function_call_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-
   std::vector<std::shared_ptr<cdk::basic_type>> argsTypes;
   const auto func = node->function();
   
@@ -667,12 +665,11 @@ void til::postfix_writer::do_function_call_node(til::function_call_node *const n
   if (func) {
     // non-recursive functions
     _currentForwardLabel.clear();
-    // if it is a forward function, the label will be set again
     func->accept(this, lvl + 2);
-    
-    if(_currentForwardLabel.empty()) // regular non-recursive function call
+    // non-recursive function call
+    if(_currentForwardLabel.empty()) 
       _pf.BRANCH();
-    else //forwarded function call
+    else
       _pf.CALL(_currentForwardLabel);
   } else { // recursive function call
       _pf.CALL(_functionLabels.back());
@@ -701,7 +698,7 @@ void til::postfix_writer::do_function_call_node(til::function_call_node *const n
       _pf.LDFVAL64();
       break;
     default:
-      error(node->lineno(), "Unable to call expression of unknown type");
+      error(node->lineno(), "Cant call expression: unknown type");
   }
   _currentForwardLabel.clear();
 }
@@ -754,7 +751,6 @@ void til::postfix_writer::do_next_node(til::next_node *const node, int lvl) {
 
 void til::postfix_writer::do_return_node(til::return_node *const node, int lvl) {
   ASSERT_SAFE_EXPRESSIONS;
-
   const auto current_function_type_name = cdk::functional_type::cast(_functions.back()->type())->output(0)->name();
 
   if (current_function_type_name != cdk::TYPE_VOID){
