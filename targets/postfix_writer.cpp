@@ -315,7 +315,7 @@ void til::postfix_writer::do_program_node(til::program_node * const node, int lv
 
   // generate the main function (RTS mandates that its name be "_main")
   _symtab.push();
-  _pf.TEXT();
+  _pf.TEXT("_main");
   _pf.ALIGN();
   _pf.GLOBAL("_main", _pf.FUNC());
   _pf.LABEL("_main");
